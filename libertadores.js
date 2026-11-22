@@ -1,4 +1,4 @@
-// Libertadores ZC – formato: 40 clubes, liga única (todos x todos, 39 rodadas),
+// Libertadores ZC – formato: N clubes (config/libertadores.json; versão atual: 50), liga única (todos x todos, N-1 rodadas),
 // formato Champions (Robson 03/11): 1º–8º direto às oitavas, 9º–24º playoffs (9x24, 10x23… ida e volta), 25º+ eliminados; mata-mata com pênaltis.
 const CFG={
  NAME:'Libertadores ZC',
@@ -8,20 +8,21 @@ const CFG={
  KO_TWO_LEGS:true,     // oitavas, quartas e semi em ida e volta (false = jogo único)
  FINAL_SINGLE:true,    // final em jogo único (campo neutro)
 };
-// 40 clubes definidos em config/libertadores.json (aplicado no build -> tabela lib_clubs do SQLite)
+// clubes definidos em config/libertadores.json (aplicado no build -> tabela lib_clubs do SQLite)
 const CF=JSON.parse(require('fs').readFileSync(__dirname+'/config/libertadores.json','utf8'));
 let CLUBS=[];const loadClubs=uni=>(CLUBS=uni.prepare('SELECT club_id FROM lib_clubs ORDER BY ord').all().map(x=>x.club_id));
 // elenco vazio (provisório): completa o time com jogadores "Provisório" de OVR neutro só para o motor rodar
 const VPOS=['GOL','LD','ZAG','ZAG','LE','VOL','MC','MEI','PD','PE','ATA','GOL','ZAG','MC','ATA','LE'];
 const virtualSquad=clubId=>VPOS.map((pos,i)=>({id:-(clubId*100+i+1),name:'Provisório '+pos+(i>=11?' (res.)':''),primary_position:pos,positions:[pos],overall:CF.placeholder_ovr,age:25,stats:{},virtual:true}));
 const STAGE_NAMES={league:'Fase de liga',playin:'Playoffs',r16:'Oitavas de final',qf:'Quartas de final',sf:'Semifinal',final:'Final'};
-function plan(n=40){const p=[];const lr=n%2?n:n-1;for(let i=1;i<=lr;i++)p.push({stage:'league',leg:0});p.push({stage:'playin',leg:1});if(CFG.PLAYIN_TWO_LEGS)p.push({stage:'playin',leg:2});
+const N_CLUBS=CF.clubs.length;
+function plan(n=N_CLUBS){const p=[];const lr=n%2?n:n-1;for(let i=1;i<=lr;i++)p.push({stage:'league',leg:0});p.push({stage:'playin',leg:1});if(CFG.PLAYIN_TWO_LEGS)p.push({stage:'playin',leg:2});
  for(const st of ['r16','qf','sf']){p.push({stage:st,leg:1});if(CFG.KO_TWO_LEGS)p.push({stage:st,leg:2});}
  p.push({stage:'final',leg:1});if(!CFG.FINAL_SINGLE)p.push({stage:'final',leg:2});
  return p.map((x,i)=>({...x,round:i+1}));}
 const LEAGUE_ROUNDS=()=>plan().filter(x=>x.stage==='league').length;
 // Metade da fase de liga: 1º turno = rodadas 1..TURNO1_END; 2º turno = TURNO1_END+1..LEAGUE_ROUNDS
-const TURNO1_END=()=>Math.floor(LEAGUE_ROUNDS()/2); // 39 → 19
+const TURNO1_END=()=>Math.floor(LEAGUE_ROUNDS()/2); // 49 → 24 (40 clubes: 39 → 19)
 // Tabela: pontos, vitórias, saldo, gols pró (depois nome). opts: {side:'home'|'away', roundFrom, roundTo, zones:false}
 function standings(matches,clubIds,nameOf=id=>String(id),pen,opts){const side=opts?.side||null,r0=opts?.roundFrom||0,r1=opts?.roundTo||1e9,useZones=opts?.zones!==false;
  const T={};clubIds.forEach(id=>T[id]={club_id:id,name:nameOf(id),j:0,v:0,e:0,d:0,gp:0,gc:0,pts:-(pen?.get(id)||0),penalty:pen?.get(id)||0,form:[]});
@@ -47,4 +48,4 @@ function winners(prev,stage){return prev.filter(m=>m.stage===stage&&m.winner).ma
 // define vencedor de um confronto após o jogo decisivo. ms = jogos do confronto (1 ou 2), last = jogo recém-disputado
 function decideTie(ms,last,r=Math.random){const a=last.home,b=last.away;let ga=0,gb=0;for(const m of ms){if(m.home===a){ga+=m.hg;gb+=m.ag}else{ga+=m.ag;gb+=m.hg}}
  if(ga!==gb)return {winner:ga>gb?a:b,agg:[ga,gb],pens:null};const p=penalties(r);return {winner:p[0]>p[1]?a:b,agg:[ga,gb],pens:p.join('-')};}
-module.exports={CFG,CF,get CLUBS(){return CLUBS},loadClubs,virtualSquad,STAGE_NAMES,plan,LEAGUE_ROUNDS,TURNO1_END,standings,penalties,koMatches,winners,decideTie,BRACKET};
+module.exports={CFG,CF,N_CLUBS,get CLUBS(){return CLUBS},loadClubs,virtualSquad,STAGE_NAMES,plan,LEAGUE_ROUNDS,TURNO1_END,standings,penalties,koMatches,winners,decideTie,BRACKET};

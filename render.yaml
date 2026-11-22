@@ -1,0 +1,19 @@
+# Libertadores ZC – versão 50 clubes (serviço NOVO; não aponta para o original).
+# Plano Free: dorme após 15 min sem acesso (sem keep-awake, por decisão do Robson).
+services:
+  - type: web
+    name: libertadores-zc-50
+    runtime: node
+    plan: free
+    branch: main
+    buildCommand: npm ci && node import.js
+    startCommand: node server.js
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: DATABASE_URL
+        sync: false # Postgres próprio e novo (Render Free ou Neon). Nunca o banco do original.
+      - key: ADMIN_APELIDOS
+        sync: false # opcional; Robshow e Duque já são admins por padrão

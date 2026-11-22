@@ -354,6 +354,96 @@
    "squad": "db",
    "budget": 500000000,
    "alt": 900
+  },
+  {
+   "name": "Belgrano",
+   "country": "Argentina",
+   "db": "Belgrano",
+   "squad": "db",
+   "budget": 20000000,
+   "budget_provisorio": true,
+   "alt": 400
+  },
+  {
+   "name": "Independiente Rivadavia",
+   "country": "Argentina",
+   "db": "Ind. Rivadavia",
+   "squad": "db",
+   "budget": 20000000,
+   "budget_provisorio": true,
+   "alt": 750
+  },
+  {
+   "name": "Platense",
+   "country": "Argentina",
+   "db": "Platense",
+   "squad": "db",
+   "budget": 20000000,
+   "budget_provisorio": true,
+   "alt": 25
+  },
+  {
+   "name": "Huracán",
+   "country": "Argentina",
+   "db": "Huracán",
+   "squad": "db",
+   "budget": 20000000,
+   "budget_provisorio": true,
+   "alt": 25
+  },
+  {
+   "name": "Talleres",
+   "country": "Argentina",
+   "db": "Talleres",
+   "squad": "db",
+   "budget": 20000000,
+   "budget_provisorio": true,
+   "alt": 450
+  },
+  {
+   "name": "Toluca",
+   "country": "México",
+   "db": "Toluca FC",
+   "squad": "db",
+   "budget": 20000000,
+   "budget_provisorio": true,
+   "alt": 2670
+  },
+  {
+   "name": "América",
+   "country": "México",
+   "db": "Club América",
+   "squad": "db",
+   "budget": 20000000,
+   "budget_provisorio": true,
+   "alt": 2240
+  },
+  {
+   "name": "Cruz Azul",
+   "country": "México",
+   "db": "CF Cruz Azul",
+   "squad": "db",
+   "budget": 20000000,
+   "budget_provisorio": true,
+   "alt": 2240
+  },
+  {
+   "name": "Monterrey",
+   "country": "México",
+   "db": "Monterrey",
+   "squad": "db",
+   "budget": 20000000,
+   "budget_provisorio": true,
+   "alt": 540
+  },
+  {
+   "name": "Tigres",
+   "country": "México",
+   "db": "Club Tigres",
+   "squad": "db",
+   "budget": 20000000,
+   "budget_provisorio": true,
+   "alt": 510
   }
  ],
  "meta_onze": 6,
@@ -385,7 +475,7 @@
   },
   {
    "from": 25,
-   "to": 40,
+   "to": 50,
    "amount": 0
   }
  ],
@@ -412,5 +502,7 @@
   }
  },
  "_doc_budget": "Verba inicial por ranking da média dos 18 maiores overs (out/2026): 5 piores 500M, 5 400M, 10 300M, 5 200M, 5 100M, 5 50M, 5 melhores 0",
- "_doc_alt": "alt: altitude (m) do estádio do mandante. Acima de 1000 m o mandante ganha vantagem e o visitante (de cidade baixa) cansa mais no 2º tempo. Efeito moderado; visitante de altitude sofre pouco."
+ "_doc_alt": "alt: altitude (m) do estádio do mandante. Acima de 1000 m o mandante ganha vantagem e o visitante (de cidade baixa) cansa mais no 2º tempo. Efeito moderado; visitante de altitude sofre pouco.",
+ "_doc_50": "Versão 50 clubes (22/11/2026): 10 clubes novos no FIM da lista (mantém os ids). Verba dos 10 novos = default_budget PROVISÓRIO (budget_provisorio) até o Robson aprovar a tabela de verbas para 50. Altitude real aproximada do estádio (m).",
+ "mid_window_round": 24
 }

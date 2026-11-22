@@ -10,7 +10,25 @@ module.exports=(app,uni)=>{
  const SCH=process.env.PGSCHEMA&&/^[a-z_][a-z0-9_]*$/.test(process.env.PGSCHEMA)?process.env.PGSCHEMA:null;
  
  if(SCH)pool.on('connect',c=>c.query(`SET search_path TO ${SCH}`).catch(()=>{}));
- const ready=(SCH?pool.query(`CREATE SCHEMA IF NOT EXISTS ${SCH}`):Promise.resolve()).then(()=>pool.query(fs.readFileSync(__dirname+'/pg.sql','utf8'))).then(()=>console.log('Postgres OK')).then(purgeTest).then(migClubs2610).then(migVerbas2610).then(migIdadesBR2610).then(migLeilaoPre2610).then(migLeilaoSurpresa2910).then(migLeilaoMid1111b).then(migRestoreUnbid1311).then(migReopenMid2015).then(migReopenMid2030).then(migMidClose2025).then(syncIdades).then(migValuesNoAgeDisc1511).then(()=>require('./kit').runPostgres(pool)).then(()=>purgeRooms());
+ const ready=(SCH?pool.query(`CREATE SCHEMA IF NOT EXISTS ${SCH}`):Promise.resolve()).then(()=>pool.query(fs.readFileSync(__dirname+'/pg.sql','utf8'))).then(()=>console.log('Postgres OK')).then(purgeTest).then(createLiga).then(skipLegacy).then(migIdadesBR2610).then(migLeilaoPre2610).then(migLeilaoSurpresa2910).then(syncIdades).then(migValuesNoAgeDisc1511).then(()=>require('./kit').runPostgres(pool)).then(()=>purgeRooms());
+ // ===== Versão 50 clubes (banco novo) =====
+ // A sala LIGA é criada ANTES das migrações (no original ela já existia quando as migrações rodaram); assim o leilão de pré-temporada
+ // herdado (config/leilao-pre.json) vira lotes da sala nova. Verbas/caixas vêm direto do config (clubs[].budget) na criação da sala.
+ async function createLiga(){const [x]=(await pool.query("SELECT id FROM rooms WHERE code='LIGA'")).rows;if(x)return;
+  const c=await pool.connect();try{await c.query('BEGIN');
+   const {rows:[room]}=await c.query("INSERT INTO rooms(code,name,owner_id,max_managers) VALUES('LIGA','Libertadores ZC',NULL,$1) ON CONFLICT(code) DO NOTHING RETURNING *",[require('./libertadores').N_CLUBS]);
+   if(room){const clubs=uni.prepare('SELECT id,budget,wage_bill FROM clubs').all();
+    await c.query('INSERT INTO room_clubs(room_id,club_id,budget,wage_budget) SELECT $1,* FROM unnest($2::int[],$3::bigint[],$4::bigint[])',[room.id,clubs.map(x=>x.id),clubs.map(x=>x.budget),clubs.map(x=>Math.round(x.wage_bill*1.1))]);
+    await c.query('INSERT INTO room_events(room_id,text) VALUES($1,$2)',[room.id,'Campeonato criado']);console.log('createLiga: sala LIGA criada');}
+   await c.query('COMMIT');}catch(e){await c.query('ROLLBACK');console.error('createLiga',e.message);}finally{c.release()}}
+ // Correções de ESTADO da sala antiga (lotes, lances, caixas, horários de 26/10 a 15/11/2026): não se aplicam a um banco novo.
+ // São marcadas como "não aplicáveis" em lib_migrations para nunca rodarem aqui. Lista e motivo no README (seção "Herdado x desativado").
+ const LEGACY=['clubs-2610','verbas-2610','restore-unbid-1311','reopen-mid-unsold-2015','reopen-mid-2030','mid-close-2025','evo-1011-gomez-notas5'];
+ async function skipLegacy(){await pool.query('CREATE TABLE IF NOT EXISTS lib_migrations(name TEXT PRIMARY KEY,at TIMESTAMPTZ DEFAULT now())');
+  const r=await pool.query('INSERT INTO lib_migrations(name) SELECT unnest($1::text[]) ON CONFLICT(name) DO NOTHING RETURNING name',[LEGACY]);if(r.rowCount)console.log('skipLegacy (não aplicáveis no banco novo):',r.rows.map(x=>x.name).join(', '));}
+ // Leilão do meio herdado (config/leilao-mid.json): os lotes só são criados quando a janela do meio abre (mkt_stage='mid'),
+ // para não entrarem no leilão de pré-temporada. Idempotente (lib_migrations 'leilao-mid-1111b').
+ setInterval(async()=>{try{await ready;const [r]=(await pool.query("SELECT mkt_stage FROM rooms WHERE code='LIGA'")).rows;if(r&&r.mkt_stage==='mid')await migLeilaoMid1111b();}catch(e){console.error('leilao-mid (agenda)',e.message)}},60000).unref();
  // Limpeza de usuários de teste: defina PURGE_TEST_USERS (regex de apelidos) nas variáveis do Render, faça deploy e depois remova.
  // Migração única: primeiro leilão (config/leilao-pre.json) -> jogadores vão para o clube "Leilão ZC" com over/pot/idade do Robson e viram lotes do leilão de pré-temporada (bloqueado até um admin desbloquear)
  async function migLeilaoPre2610(){if((await pool.query("SELECT 1 FROM lib_migrations WHERE name='leilao-pre-2610'")).rows.length)return;
@@ -34,6 +52,7 @@ module.exports=(app,uni)=>{
    await c.query("INSERT INTO lib_migrations(name) VALUES('leilao-pre-2610')");await c.query('COMMIT');console.log('Migração leilao-pre-2610 OK',rooms.length,'sala(s)');}catch(e){await c.query('ROLLBACK');console.error('leilao-pre-2610',e)}finally{c.release()}}
  // Migração única: leilão surpresa (config/leilao-surpresa.json, Robson 29/10) -> só na sala LIGA: jogadores vão para o "Leilão ZC" e viram lotes 'surpresa' com abertura/fechamento próprios (não mexe no calendário do mercado)
  async function migLeilaoSurpresa2910(){if((await pool.query("SELECT 1 FROM lib_migrations WHERE name='leilao-surpresa-2910'")).rows.length)return;
+  {const CS0=JSON.parse(fs.readFileSync(__dirname+'/config/leilao-surpresa.json','utf8'));if(!CS0.opens_at||!CS0.closes_at||Date.parse(CS0.closes_at)<=Date.now()){console.log('leilao-surpresa: datas (opens_at/closes_at) no passado ou indefinidas em config/leilao-surpresa.json; aguardando novas datas');return;}}
   const CS=JSON.parse(fs.readFileSync(__dirname+'/config/leilao-surpresa.json','utf8'));const auc=uni.prepare("SELECT id FROM clubs WHERE name='Leilão ZC'").get()?.id;if(!auc)return console.error('leilao-surpresa-2910: clube Leilão ZC ausente');
   const ps=uni.prepare("SELECT p.id,p.name,p.overall,p.potential,p.age,p.market_value FROM lib_auction a JOIN players p ON p.id=a.player_id WHERE a.stage='surpresa' ORDER BY a.ord").all();if(!ps.length)return console.error('leilao-surpresa-2910: sem jogadores');
   const lib=new Set(uni.prepare('SELECT club_id FROM lib_clubs').all().map(x=>x.club_id));const cn=id=>uni.prepare('SELECT name FROM clubs WHERE id=?').get(id)?.name||id;
@@ -77,7 +96,8 @@ async function migLeilaoMid1111b(){if((await pool.query("SELECT 1 FROM lib_migra
     else if(d.status==='open')await c.query('UPDATE auction_lots SET from_club=$2,min_bid=$3 WHERE id=$1',[d.id,auc,Math.max(1e5,Math.round(p.market_value*pct/1e5)*1e5)]);
    }
    await c.query('UPDATE rooms SET version=version+1 WHERE id=$1',[room.id]);
-   let ev=`🔨 Leilão do meio da fase de liga: ${ps.length-skipped.length} jogador(es) definidos (abre 13/11 12:00 e fecha 13/11 20:00, horário de Brasília).`;
+   const MW=(JSON.parse(fs.readFileSync(__dirname+'/config/agenda-zc.json','utf8')).windows||{}).mid||{};const fbr=d=>d?new Date(d).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'a definir';
+   let ev=`🔨 Leilão do meio da fase de liga: ${ps.length-skipped.length} jogador(es) definidos (abre ${fbr(MW.auction_start)} e fecha ${fbr(MW.auction_close)}, horário de Brasília).`;
    if(moved.length)ev+=` Saíram dos clubes para o leilão: ${moved.join(', ')}.`;
    if(skipped.length)ev+=` Não entraram (já estão em clube com técnico): ${skipped.join(', ')}.`;
    await c.query('INSERT INTO room_events(room_id,text) VALUES($1,$2)',[room.id,ev]);
@@ -164,7 +184,7 @@ async function migLeilaoMid1111b(){if((await pool.query("SELECT 1 FROM lib_migra
  let ligaP=null;
  const ensureLiga=()=>ligaP||(ligaP=(async()=>{await ready;const [x]=await q("SELECT * FROM rooms WHERE code='LIGA'");if(x)return x;
   const c=await pool.connect();try{await c.query('BEGIN');
-   const {rows:[room]}=await c.query("INSERT INTO rooms(code,name,owner_id,max_managers) VALUES('LIGA','Libertadores ZC',NULL,40) ON CONFLICT(code) DO NOTHING RETURNING *");
+   const {rows:[room]}=await c.query("INSERT INTO rooms(code,name,owner_id,max_managers) VALUES('LIGA','Libertadores ZC',NULL,$1) ON CONFLICT(code) DO NOTHING RETURNING *",[require('./libertadores').N_CLUBS]);
    if(room){const clubs=uni.prepare('SELECT id,budget,wage_bill FROM clubs').all();
     await c.query('INSERT INTO room_clubs(room_id,club_id,budget,wage_budget) SELECT $1,* FROM unnest($2::int[],$3::bigint[],$4::bigint[])',[room.id,clubs.map(x=>x.id),clubs.map(x=>x.budget),clubs.map(x=>Math.round(x.wage_bill*1.1))]);
     await c.query('INSERT INTO room_events(room_id,text) VALUES($1,$2)',[room.id,'Campeonato criado']);}
@@ -179,7 +199,7 @@ async function migLeilaoMid1111b(){if((await pool.query("SELECT 1 FROM lib_migra
   const ev=await q('SELECT text,created_at FROM room_events WHERE room_id=$1 ORDER BY id DESC LIMIT 20',[room.id]);
   s.json({...room,me:r.user.id,managers:ms.map(m=>({...m,club:clubInfo(m.club_id)})),events:ev});}));
  app.post('/api/rooms/:code/club',auth,wrap(async(r,s)=>{const room=await member(r);const club=clubInfo(+r.body?.club_id);if(!club)throw fail('Clube inválido');
-  if(!r.user.admin)throw fail('Os clubes são definidos pelos administradores na Central da liga',403);if(room.status!=='lobby')throw fail('A temporada já começou');if(!uni.prepare('SELECT 1 FROM lib_clubs WHERE club_id=?').get(club.id))throw fail('Na Libertadores ZC só valem os 40 clubes da competição');
+  if(!r.user.admin)throw fail('Os clubes são definidos pelos administradores na Central da liga',403);if(room.status!=='lobby')throw fail('A temporada já começou');if(!uni.prepare('SELECT 1 FROM lib_clubs WHERE club_id=?').get(club.id))throw fail('Na Libertadores ZC só valem os '+require('./libertadores').N_CLUBS+' clubes da competição');
   const taken=await q('SELECT u.nick FROM room_managers m JOIN users u ON u.id=m.user_id WHERE room_id=$1 AND club_id=$2 AND user_id<>$3',[room.id,club.id,r.user.id]);if(taken.length)throw fail(club.name+' já é de '+taken[0].nick,409);
   try{await q('UPDATE room_managers SET club_id=$3 WHERE room_id=$1 AND user_id=$2',[room.id,r.user.id,club.id]);}catch(e){if(e.code==='23505')throw fail('Clube já escolhido',409);throw e;}
   await bump(room.id,`${r.user.nick} assumiu o ${club.name} (${club.league})`);s.json({ok:1,club});}));

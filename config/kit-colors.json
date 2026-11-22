@@ -320,6 +320,86 @@
       "gk_primary": "#111111",
       "gk_secondary": "#C9A227",
       "gk_number": "#FFFFFF"
+    },
+    "Belgrano": {
+      "primary": "#5BC2E7",
+      "secondary": "#FFFFFF",
+      "number": "#111111",
+      "gk_primary": "#111111",
+      "gk_secondary": "#5BC2E7",
+      "gk_number": "#FFFFFF"
+    },
+    "Independiente Rivadavia": {
+      "primary": "#1B2A6B",
+      "secondary": "#FFFFFF",
+      "number": "#FFFFFF",
+      "gk_primary": "#2E7D32",
+      "gk_secondary": "#111111",
+      "gk_number": "#FFFFFF"
+    },
+    "Platense": {
+      "primary": "#FFFFFF",
+      "secondary": "#5C3A1E",
+      "number": "#5C3A1E",
+      "gk_primary": "#111111",
+      "gk_secondary": "#5C3A1E",
+      "gk_number": "#FFFFFF"
+    },
+    "Huracán": {
+      "primary": "#FFFFFF",
+      "secondary": "#E30613",
+      "number": "#E30613",
+      "gk_primary": "#111111",
+      "gk_secondary": "#E30613",
+      "gk_number": "#FFFFFF"
+    },
+    "Talleres": {
+      "primary": "#1B2A6B",
+      "secondary": "#FFFFFF",
+      "number": "#FFFFFF",
+      "gk_primary": "#F5A623",
+      "gk_secondary": "#111111",
+      "gk_number": "#111111"
+    },
+    "Toluca": {
+      "primary": "#D50032",
+      "secondary": "#FFFFFF",
+      "number": "#FFFFFF",
+      "gk_primary": "#111111",
+      "gk_secondary": "#D50032",
+      "gk_number": "#FFFFFF"
+    },
+    "América": {
+      "primary": "#FFD200",
+      "secondary": "#002D72",
+      "number": "#002D72",
+      "gk_primary": "#111111",
+      "gk_secondary": "#FFD200",
+      "gk_number": "#FFFFFF"
+    },
+    "Cruz Azul": {
+      "primary": "#00428C",
+      "secondary": "#FFFFFF",
+      "number": "#FFFFFF",
+      "gk_primary": "#111111",
+      "gk_secondary": "#E30613",
+      "gk_number": "#FFFFFF"
+    },
+    "Monterrey": {
+      "primary": "#0C2340",
+      "secondary": "#FFFFFF",
+      "number": "#FFFFFF",
+      "gk_primary": "#2E7D32",
+      "gk_secondary": "#111111",
+      "gk_number": "#FFFFFF"
+    },
+    "Tigres": {
+      "primary": "#FDB913",
+      "secondary": "#003A70",
+      "number": "#003A70",
+      "gk_primary": "#111111",
+      "gk_secondary": "#FDB913",
+      "gk_number": "#FFFFFF"
     }
   }
 }
