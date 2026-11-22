@@ -1,5 +1,5 @@
 {"_doc":"Leilão surpresa (lista do Robson, 29/10/2026). id = jogador FC27 reaproveitado (atributos do motor; over/pot exatamente estes); sem id = criado (stats_from = atributos base, dob = data de nascimento real). Lance mínimo = 50% do valor de mercado (mesma regra dos outros leilões). Cada clube leva no máx. 1; lance no último minuto prorroga 60 s; lance não pode ser retirado; sem lance = travado até Robson/Duque decidirem.",
-"room":"LIGA","opens_at":"2026-10-29T16:00:00-03:00","closes_at":"2026-10-30T12:00:00-03:00","label":"Leilão surpresa",
+"room":"LIGA","opens_at":"2027-01-05T16:00:00-03:00","closes_at":"2027-01-06T12:00:00-03:00","label":"Leilão surpresa",
 "players":[
 {"pos":"GOL","name":"Juan Musso","ovr":81,"pot":81,"id":214979},
 {"pos":"GOL","name":"Pedro Morisco","ovr":77,"pot":82,"nat":"Brasil","dob":"2004-01-10","stats_from":255981,"height_cm":191,"weight_kg":85,"foot":"Direito"},

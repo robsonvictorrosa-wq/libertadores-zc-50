@@ -1,16 +1,16 @@
 {
- "_doc_50": "Versão 50 clubes: paused=true desliga a agenda automática (início da temporada, rodadas por horário, leilões/mercado por horário e punição) porque as datas abaixo são da temporada antiga (40 clubes). Janelas já em after_round 24 (meio) e 49 (fim da liga). Proposta de datas em config/agenda-zc.proposta-50.json; ao aprovar, copiar as datas e trocar paused para false.",
+ "_doc_50": "Versão 50 clubes: datas aprovadas pelo Robson (22/11): rodada 1 em 10/01/2027. paused=true mantém a agenda automática desligada até o Robson testar; para ligar, trocar paused para false.",
  "paused": true,
  "_doc": "Agenda da Libertadores ZC (horário de Brasília). Aplicada sozinha pelo servidor. start_slot=1: a 1ª rodada usa o 2º horário do dia (19:00). pre_market_during_rounds: exceção aprovada pelo Robson (03/11) para jogar com o mercado da pré-temporada aberto até market_close. penalty_at_market_close: punição da meta de contratações aplicada uma vez logo após market_close (não no início da temporada). windows.mid (Robson 11/11): R18 e R19 jogam em 12/11 (12:00 e 19:00), mercado do meio abre 12/11 20:00 e fecha 15/11 20:00, sem jogos na janela; R20 volta em 16/11 12:00; leilão do meio roda no meio do mercado (mercado segue aberto; jogadores do leilão bloqueados no mercado). windows.*.resume_slot: índice do horário do 1º jogo após a janela (1 = 19:00).",
  "room": "LIGA",
- "auction_start": "2026-10-26T12:00:00-03:00",
- "auction_close": "2026-10-26T20:00:00-03:00",
- "market_close": "2026-11-03T23:59:00-03:00",
+ "auction_start": "2027-01-03T12:00:00-03:00",
+ "auction_close": "2027-01-03T20:00:00-03:00",
+ "market_close": "2027-01-09T23:59:00-03:00",
  "pre_market_during_rounds": true,
  "penalty_at_market_close": true,
- "market_open": "2026-10-26T21:40:00-03:00",
- "matches_start": "2026-11-03",
- "start_slot": 1,
+ "market_open": "2027-01-03T21:40:00-03:00",
+ "matches_start": "2027-01-10",
+ "start_slot": 0,
  "slots": [
   "12:00",
   "19:00"
@@ -18,20 +18,20 @@
  "windows": {
   "mid": {
    "after_round": 24,
-   "auction_start": "2026-11-13T12:00:00-03:00",
-   "auction_close": "2026-11-13T20:25:00-03:00",
-   "market_close": "2026-11-15T20:00:00-03:00",
-   "resume": "2026-11-16",
-   "market_open": "2026-11-12T20:00:00-03:00",
+   "market_open": "2027-01-21T21:00:00-03:00",
+   "auction_start": "2027-01-22T12:00:00-03:00",
+   "auction_close": "2027-01-22T20:00:00-03:00",
+   "market_close": "2027-01-24T20:00:00-03:00",
+   "resume": "2027-01-25",
    "resume_slot": 0
   },
   "end": {
    "after_round": 49,
-   "auction_start": "2026-11-27T12:00:00-03:00",
-   "auction_close": "2026-11-27T21:00:00-03:00",
-   "market_close": "2026-11-28T21:00:00-03:00",
-   "resume": "2026-11-29"
+   "auction_start": "2027-02-07T12:00:00-03:00",
+   "auction_close": "2027-02-07T21:00:00-03:00",
+   "market_close": "2027-02-08T21:00:00-03:00",
+   "resume": "2027-02-09"
   }
  },
- "final_at": "2026-12-03T19:00:00-03:00"
+ "final_at": "2027-02-13T19:00:00-03:00"
 }

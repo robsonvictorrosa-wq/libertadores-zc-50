@@ -448,25 +448,7 @@ module.exports=({app,uni,q,pool,auth,wrap,fail,member,bump,R,M})=>{
  // Robson 26/10 22:33: lista (somente leitura) propostas com troca ainda abertas criadas depois de 22:09.
  async function auditSwaps(){const T='FIXSWAPLIST';try{const r=await pool.query(`SELECT * FROM offers WHERE room_id=(SELECT id FROM rooms WHERE code='LIGA') AND swap_player_id IS NOT NULL AND status IN ('pending','countered','club_accepted') AND created_at>'2026-10-26T22:09:00-03:00' ORDER BY id`);console.log(T,JSON.stringify({total:r.rowCount,lista:r.rows.slice(0,10).map(o=>({id:o.id,jogador:pname(o.player_id),de:cname(o.seller_club),para:cname(o.buyer_club),valor:+o.fee,troca:pname(o.swap_player_id),status:o.status,criada:new Date(o.created_at).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'})}))}));}catch(e){console.log(T,'ERR',e.message);}}
 
- // Robson 27/10 09:10: Hugo Bueno (261224, ex-Wolves) no Santos por 25,5 mi (valor do Kaiki no leilão). Decisão da administração; o valor não é creditado a ninguém.
- async function hugoBueno(){const T='FIXHUGO';const PID=261224,SAN=766,FEE=25.5e6;const c=await pool.connect();try{await c.query('BEGIN');
-  const [rm]=(await c.query("SELECT * FROM rooms WHERE code='LIGA' FOR UPDATE")).rows;const rid=rm.id;
-  const [ex]=(await c.query('SELECT club_id FROM room_players WHERE room_id=$1 AND player_id=$2',[rid,PID])).rows;
-  const bud=async()=>+(await c.query('SELECT budget FROM room_clubs WHERE room_id=$1 AND club_id=$2',[rid,SAN])).rows[0]?.budget;const b0=await bud();
-  if(ex){console.log(T,'SKIP já aplicado',JSON.stringify({clube:cname(ex.club_id),caixa_santos:b0}));await c.query('ROLLBACK');return;}
-  const av=await avail(c,rm,SAN);if(!(b0>=FEE)){console.log(T,'STOP sem caixa',JSON.stringify({caixa_santos:b0,disponivel:av}));await c.query('ROLLBACK');return;}
-  const w0=+(await c.query('SELECT budget FROM room_clubs WHERE room_id=$1 AND club_id=626',[rid])).rows[0]?.budget;
-  await M.execute(c,rm,{pid:PID,from:626,to:SAN,fee:0,kind:'decisão da administração'}); // fee 0: nada é creditado ao Wolves
-  await c.query('UPDATE room_clubs SET budget=budget-$3 WHERE room_id=$1 AND club_id=$2',[rid,SAN,FEE]);
-  await c.query("UPDATE transfers SET fee=$3 WHERE id=(SELECT max(id) FROM transfers WHERE room_id=$1 AND player_id=$2)",[rid,PID,FEE]).catch(()=>{});
-  const w1=+(await c.query('SELECT budget FROM room_clubs WHERE room_id=$1 AND club_id=626',[rid])).rows[0]?.budget;if(w0!==w1)throw new Error('caixa do Wolves mudou');
-  const born=new Date('2002-09-18'),now=new Date();const age=now.getFullYear()-born.getFullYear()-((now.getMonth()<8||(now.getMonth()===8&&now.getDate()<18))?1:0);
-  await c.query('UPDATE room_players SET age=$3 WHERE room_id=$1 AND player_id=$2',[rid,PID,age]);
-  await note(c,rid,`🛡️ Decisão da administração: Hugo Bueno (LE, 75) foi para o Santos por € 25,5 mi.`);
-  await c.query('UPDATE rooms SET version=version+1 WHERE id=$1',[rid]);const b1=await bud();
-  const [rp]=(await c.query('SELECT * FROM room_players WHERE room_id=$1 AND player_id=$2',[rid,PID])).rows;
-  await c.query('COMMIT');console.log(T,'OK',JSON.stringify({caixa_antes:b0,caixa_depois:b1,disponivel_antes:av,clube:cname(rp?.club_id),idade:rp?.age}));
- }catch(e){await c.query('ROLLBACK').catch(()=>{});console.log(T,'ERR',e.message);}finally{c.release();}}
+ // Versão 50: ajuste fixo do Hugo Bueno no Santos (FIXHUGO, débito de 25,5 mi) removido por decisão do Robson (22/11): resultado do leilão antigo não conta.
  const step=async(n,f)=>{global.__act='fix '+n;const t0=Date.now();console.log('BOOTFIX início',n);try{await Promise.race([Promise.resolve().then(f),new Promise((_,ko)=>setTimeout(()=>ko(new Error('timeout 60s')),60000))]);console.log('BOOTFIX fim',n,(Date.now()-t0)+'ms');}catch(e){console.log('BOOTFIX erro',n,e.message);}global.__act='idle';};
  setTimeout(async()=>{await step('koFormato()',async()=>{/* Robson 03/11: formato Champions (playoffs ida e volta) -> plano com 1 rodada a mais; só ajusta temporadas ainda na fase de liga */const r=await pool.query('UPDATE competitions SET rounds_total=$1 WHERE name=$2 AND rounds_total<>$1 AND current_round<=$3',[PLAN.length,L.CFG.NAME,LEAGUE_END]);console.log('KOFORMATO',JSON.stringify({rounds_total:PLAN.length,ajustadas:r.rowCount}));});await step('ovrZero()',async()=>{const r=await pool.query('UPDATE room_players SET overall=CASE WHEN overall<=0 THEN NULL ELSE overall END,ovr_start=CASE WHEN ovr_start<=0 THEN NULL ELSE ovr_start END WHERE overall<=0 OR ovr_start<=0');console.log('FIXOVR0',JSON.stringify({restaurados:r.rowCount}));});/* Versão 50 clubes: correções de ESTADO da sala antiga (moveLot kaiki/talisca, suspendLots, unsuspend Jair/Marcos Leonardo, taliscaLog, savinho90, assignLot x7, zeroOffers, auditMoney, cancelAll2209, clearCooldowns, auditSwaps, hugoBueno) desativadas: dependem de ids de lote/lances/propostas do banco original. Ver README. */console.log('BOOTFIX todos concluídos');},15000);
  // Robson 04/11: replay da evolução com as regras novas (uma vez por versão; log EVOREPLAY)

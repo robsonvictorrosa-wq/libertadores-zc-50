@@ -5,6 +5,7 @@ services:
     name: libertadores-zc-50
     runtime: node
     plan: free
+    region: virginia
     branch: main
     buildCommand: npm ci && node import.js
     startCommand: node server.js
@@ -14,6 +15,6 @@ services:
       - key: NODE_VERSION
         value: "20"
       - key: DATABASE_URL
-        sync: false # Postgres próprio e novo (Render Free ou Neon). Nunca o banco do original.
+        sync: false # banco Neon grátis próprio desta versão (definido no painel). Nunca o banco do original.
       - key: ADMIN_APELIDOS
         sync: false # opcional; Robshow e Duque já são admins por padrão
