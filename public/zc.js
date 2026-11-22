@@ -1,0 +1,408 @@
+/* Super Libertadores ZC · shell de UI (abas) sobre o backend existente */
+(function(){
+// Entrada no app (abrir site, PWA, recarregar, login): sempre o menu de quadros. hashchange depois disso segue normal.
+{const h=location.hash;if(h!=='#/'&&h!=='#'&&h!==''&&h!=='#/inicio')history.replaceState(null,'',location.pathname+location.search+'#/');}
+const TABS=[['','🏠','Menu'],['campeonato','🏆','Campeonato'],['mercado','🛒','Mercado'],['escalacao','📋','Escalação'],['jogos','⚽','Jogos'],['tabela','📑','Tabela'],['estatisticas','📊','Estatísticas'],['leilao','🔨','Leilão'],['premiacoes','🥇','Premiações'],['clubes','💰','Clubes e verbas'],['evolucao','📈','Evolução'],['central','⚙️','Central da liga',1]];
+let OV=null;const R=()=>`/rooms/${ROOM}`;
+const POSC={GOL:'#C62828',GK:'#C62828',ZAG:'#E65100',CB:'#E65100',LD:'#E65100',LE:'#E65100',RB:'#E65100',LB:'#E65100',ADE:'#E65100',ADD:'#E65100',VOL:'#2E9E4F',CDM:'#2E9E4F',MC:'#2E9E4F',CM:'#2E9E4F',MEI:'#2E9E4F',CAM:'#2E9E4F',ME:'#2E9E4F',MD:'#2E9E4F',LM:'#2E9E4F',RM:'#2E9E4F',PE:'#FFFFFF',PD:'#FFFFFF',LW:'#FFFFFF',RW:'#FFFFFF',ATA:'#FFFFFF',ST:'#FFFFFF',SA:'#FFFFFF',CF:'#FFFFFF',CA:'#FFFFFF'};
+const pc=p=>POSC[p]||'#6B6B6B';
+const ABR={'Atlético Nacional':'ATN','Nacional':'NAC','Flamengo':'FLA','Palmeiras':'PAL','Fluminense':'FLU','São Paulo':'SAO','Corinthians':'COR','Atlético Mineiro':'CAM','Grêmio':'GRE','Internacional':'INT','Cruzeiro':'CRU','Santos':'SAN','Vasco':'VAS','Athletico-PR':'CAP','Botafogo':'BOT','Bahia':'BAH','River Plate':'RIV','Boca Juniors':'BOC','Racing Club':'RAC','Independiente':'IND','San Lorenzo':'SLO','Estudiantes':'EST','Vélez Sarsfield':'VEL','Argentinos Jrs.':'ARG','Rosario Central':'ROS','Belgrano':'BEL','Lanús':'LAN','Peñarol':'PEÑ','Indep. Santa Fe':'ISF','U. Católica':'UCA','Coquimbo Unido':'COQ','Olimpia':'OLI','Cerro Porteño':'CER','Libertad':'LIB','Barcelona SC':'BSC','LDU Quito':'LDU','Ind. del Valle':'IDV','Sporting Cristal':'CRI','Universitario':'UNI','Bolívar':'BOL','Always Ready':'ALW','Caracas FC':'CAR'};
+const hue=s=>{let h=0;for(const c of String(s))h=(h*31+c.charCodeAt(0))%360;return h};
+const abbr=n=>ABR[n]||String(n||'?').normalize('NFD').replace(/[^A-Za-z ]/g,'').replace(/^(CA|FC|SC|CD|Club) /,'').slice(0,3).toUpperCase();
+const CREST={"Flamengo": 765, "Palmeiras": 763, "Fluminense": 768, "Botafogo": 238, "São Paulo": 769, "Corinthians": 758, "Atlético Mineiro": 761, "Grêmio": 767, "Internacional": 772, "Cruzeiro": 764, "Bahia": 309, "Santos": 766, "Vasco": 760, "Athletico-PR": 773, "River Plate": 163, "Boca Juniors": 376, "Racing": 285, "Independiente": 123, "San Lorenzo": 173, "Estudiantes": 171, "Vélez Sarsfield": 624, "Argentinos Juniors": 165, "Rosario Central": 244, "Atlético Nacional": 692, "Lanús": 122, "Peñarol": 506, "Indep. Santa Fe": 676, "Universidad Católica": 707, "Coquimbo Unido": 315, "Olimpia": 339, "Cerro Porteño": 166, "Libertad": 243, "Barcelona de Guayaquil": 274, "LDU Quito": 73, "Independiente del Valle": 167, "Sporting Cristal": 261, "Universitario": 358, "Bolívar": 245, "Nacional": "nacional-uru", "Caracas FC": 185};
+const badge0=n=>`<span class="badge" style="background:hsl(${hue(n)},55%,32%)">${esc(abbr(n))}</span>`;
+const badge=n=>CREST[n]?`<span class="badge crest"><img src="/crests/${CREST[n]}.png" alt="${esc(abbr(n))}" loading="lazy" onerror="this.parentNode.outerHTML=this.parentNode.dataset.fb"></span>`.replace('class="badge crest"',`class="badge crest" data-fb='${badge0(n).replace(/'/g,'&#39;')}'`):badge0(n);
+const mi=v=>v==null?'—':'€ '+(v/1e6).toFixed(1).replace('.',',')+' mi';
+const psq=p=>{const pos=p.primary_position||p.pos,bg=pc(pos);return `<span class="psq" style="background:${bg};color:${bg==='#FFFFFF'?'#000':'#fff'}">${esc(pos||'—')}</span>`};
+const empty=(t,s)=>`<div class="card empty"><b>${t}</b>${s||''}</div>`;
+async function ov(){OV=await get(R()+'/zc/overview');window.zOV=OV;return OV}
+function chrome(tab){const isAdm=OV?.admin;const isMenu=tab===''||tab==='inicio';
+ document.getElementById('ztabs').innerHTML=TABS.filter(t=>!t[3]||isAdm).map(t=>{const href=t[0]===''?'#/':`#/${t[0]}`;const on=t[0]===tab||(t[0]===''&&isMenu);return `<a href="${href}" class="${on?'on':''}">${t[2]}</a>`}).join('');
+ const on=document.querySelector('#ztabs a.on');if(on)on.scrollIntoView({inline:'center',block:'nearest'});
+ const prof=document.getElementById('zprofile');
+ if(prof){if(!ME){prof.innerHTML='';prof.hidden=true}else{const mc=OV&&OV.me?OV.clubs.find(c=>c.id===OV.me.club_id):null;const role=OV?(OV.admin?'Administrador':'Técnico'):'Técnico';const room=OV?.room?.name||'';
+  const saldo='Saldo: '+mi(mc?(mc.budget??mc.initial):null);
+  prof.hidden=false;prof.innerHTML=`${mc?badge(mc.name):''}<div class="who"><span class="nm">${esc(ME.nick)}</span><span class="meta">${mc?esc(mc.name)+' · ':''}${role}${room?' · '+esc(room):''}</span><span class="links"><span class="saldo">${saldo}</span> · <a href="#" onclick="zSair();return false">Sair</a></span></div>`}}
+ document.getElementById('zcrumb').innerHTML='';}
+window.zSair=async()=>{try{await post('/auth/logout',{})}catch(e){}localStorage.removeItem('room');ROOM=null;ME=null;location.hash='#/';location.reload();};
+let LIGA=null;
+async function need(tab){if(window.zLastTab!==tab){window.zLastTab=tab;app.innerHTML='<div class="card empty" style="text-align:center;padding:28px">Carregando…</div>';}if(!ME&&!(await whoami())){chrome('');loginView(()=>{if(location.hash!=='#/'&&location.hash!=='#'&&location.hash!=='#/inicio')location.hash='#/';else route();});return false}
+ try{if(!LIGA)LIGA=await get('/liga');ROOM=LIGA.code;localStorage.room=ROOM;await ov()}catch(e){chrome(tab);app.innerHTML=empty('Erro ao carregar o campeonato',esc(e.message));return false}
+ chrome(tab);return true}
+const myClub=()=>OV.clubs.find(c=>c.id===OV.me.club_id);
+const noClub=()=>empty('Sem clube',OV?.admin?'Atribua clubes aos técnicos na <a href="#/central">Central da liga</a>.':'Você ainda não comanda um clube. Aguarde um administrador definir seu clube na Central da liga.');
+
+// ---------- INÍCIO (menu em tiles) ----------
+async function inicio(){if(!await need(''))return;
+ const phase=esc(OV.phase||'Temporada'),season=OV.room?.season||1;
+ app.innerHTML=`<div class="kicker">Libertadores · Temporada ${season} · ${phase}</div>
+ <div class="mosaic">
+  <a class="tile sel t-camp" href="#/campeonato"><h2>Campeonato</h2><p>Liga, fase atual e simulação da temporada.</p></a>
+  <div class="tile photo t-vis"><img class="bg" src="/tile-lights.jpg" alt=""><div class="mark"><img src="/logo-mark.png" alt="Super Libertadores ZC"></div></div>
+  <a class="tile t-merc" href="#/mercado"><h2>Mercado</h2><p>Propostas, observações e contratações.</p></a>
+  <a class="tile t-esc" href="#/escalacao"><h2>Escalação</h2><p>Titulares, banco e tática.</p></a>
+  <a class="tile t-jog" href="#/jogos"><h2>Jogos</h2><p>Rodadas e confrontos.</p></a>
+  <a class="tile t-tab" href="#/tabela"><h2>Tabela</h2><p>Classificação e forma recente.</p></a>
+  <a class="tile t-est" href="#/estatisticas"><h2>Estatísticas</h2><p>Gols, notas e artilharia.</p></a>
+  <a class="tile t-lei" href="#/leilao"><h2>Leilão</h2><p>Lotes e lances.</p></a>
+  <a class="tile t-pre" href="#/premiacoes"><h2>Premiações</h2><p>Premiação da liga.</p></a>
+  <a class="tile t-clu" href="#/clubes"><h2>Clubes e verbas</h2><p>Os 40 clubes e as caixas.</p></a>
+  <a class="tile t-evo" href="#/evolucao"><h2>Evolução</h2><p>Progresso do elenco.</p></a>
+ </div>`;}
+
+// ---------- CAMPEONATO ----------
+async function campeonato(step){if(!await need('campeonato'))return;const c=OV.comp,mc=myClub();
+ let h=`<div class="hero"><div class="kick">Libertadores · Temporada ${OV.room.season||1}</div><h1>${esc(OV.phase)}</h1><p>40 clubes, liga única de 39 rodadas. Top 8 direto às oitavas; 9º–24º disputam os playoffs (ida e volta); 25º+ eliminados. ${mc?`Você comanda <b>${esc(mc.name)}</b>.`:''}</p>`;
+ if(!c){h+=OV.admin?`<a class="btn" href="#/central">Central da liga: definir clubes e iniciar temporada</a>`:`<p>${mc?'Aguardando os administradores iniciarem a temporada.':'Aguardando um administrador definir seu clube.'}</p>`;h+=calBox()+'</div>';app.innerHTML=h+`<div class="z3"><div class="stat"><span>Clubes</span><b>40</b></div><div class="stat"><span>Técnicos</span><b>${OV.managers.filter(m=>m.club_id).length}</b></div><div class="stat"><span>Verba</span><b>€ 0 a € 500 mi</b></div></div>`;return}
+ h+=`<div style="display:flex;gap:8px;flex-wrap:wrap">${OV.admin?`<button class="btn" onclick="zSim()">▶ Simular próxima etapa</button>`:`<button class="btn sec" onclick="post('${R()}/ready',{}).then(route)">✋ Marcar pronto</button>`}<a class="btn sec" href="#/escalacao">Escalação</a></div>${calBox()}</div><div id="zwarn"></div>`;
+ if(c.current_round===0)h+=`<div class="card warn" style="margin-bottom:12px"><div class="kick">Antes da janela</div><p style="margin:6px 0 0">O mercado está ${OV.window?.open?'<b class="ok">aberto</b>':'<b class="no">fechado</b>'}. Monte o elenco e garanta a <b>meta do onze</b>: pelo menos ${OV.meta_need} titulares contratados por você.</p></div>`+preBox();
+ const tot=(OV.managers||[]).filter(m=>m.club_id).length;h+=`<div class="z3" style="margin-bottom:14px"><div class="stat"><span>Etapa</span><b>${Math.min(c.current_round+1,47)}/47</b></div><div class="stat"><span>Técnicos</span><b>${tot}</b></div><div class="stat"><span>Mercado</span><b>${OV.cal?.state==='auction'?'Leilão':OV.window?.open?'Aberto':'Fechado'}</b></div></div>`;
+ const r=+step||Math.max(1,c.current_round);let fx;try{fx=await get(`${R()}/comp/${c.id}/fixtures?round=${r}`)}catch(e){fx={matches:[],plan:[]}}
+ const lab=(s,i)=>s.stage==='league'?`Rodada ${s.round??i+1}`:(fx.stages?.[s.stage]||s.stage)+(s.leg===1&&s.stage!=='final'?' · ida':s.leg===2?' · volta':'');
+ h+=`<h2>Central de confrontos</h2><select onchange="location.hash='#/campeonato/'+this.value" style="width:100%;margin-bottom:10px">${(fx.plan||[]).map((s,i)=>`<option value="${i+1}" ${i+1===r?'selected':''}>Etapa ${i+1} – ${lab(s,i)}</option>`).join('')}</select>`;
+ h+=fx.matches.length?`<div class="zg">${fx.matches.map(m=>`<div class="mc" onclick="location.hash='#/jogo/${m.id}'" style="cursor:pointer"><div class="tm">${badge(m.home_name)}<span class="nm">${esc(m.home_name)}${m.home_mgr?` <span class="tag">${esc(m.home_mgr)}</span>`:''}</span></div><div class="sc">${m.played?`${m.hg} × ${m.ag}`:'×'}<span class="st">${m.played?'Encerrado'+(m.pens?' (pên.)':''):'Agendado'}</span></div><div class="tm r"><span class="nm">${m.away_mgr?`<span class="tag">${esc(m.away_mgr)}</span> `:''}${esc(m.away_name)}</span>${badge(m.away_name)}</div></div>`).join('')}</div>`:empty('Sem jogos','Nenhum confronto definido para esta etapa ainda.');
+ try{const t=await get(`${R()}/comp/${c.id}/table`);h+=`<h2 style="margin-top:20px">Classificação</h2><div class="tw"><table><tr><th>#</th><th>Clube</th><th>P</th><th>J</th><th>V</th><th>E</th><th>D</th><th>SG</th></tr>${t.rows.map((x,i)=>`<tr class="${x.zone==='oitavas'?'zone-o':x.zone==='playin'?'zone-p':''}"><td>${i+1}</td><td style="display:flex;align-items:center;gap:6px">${badge(x.name)} ${esc(x.name)}${x.manager?` <span class="tag">${esc(x.manager)}</span>`:''}</td><td><b>${x.pts}</b>${x.penalty?`<div class="no" style="font-size:11px">-${x.penalty} pts punição</div>`:''}</td><td>${x.j}</td><td>${x.v}</td><td>${x.e}</td><td>${x.d}</td><td>${x.gp-x.gc}</td></tr>`).join('')}</table></div><p class="sub" style="font-size:12px"><span style="color:#D4AF37">■</span> 1º–8º oitavas · <span style="color:#C5C5C5">■</span> 9º–24º playoffs · <a href="#/matamata">Mata-mata</a> · <a href="#/bolao">Bolão</a> · <a href="#/historico">Histórico</a></p>`}catch(e){}
+ app.innerHTML=h;}
+
+// ---------- JOGOS / TABELA ----------
+let FX=null,FXt=0;async function zfx(){if(!FX||Date.now()-FXt>60e3){FX=await get(R()+'/zc/fixtures');FXt=Date.now()}return FX}
+const brt=iso=>new Date(iso).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',weekday:'short',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+const STG={league:'Rodada',playin:'Playoffs',r16:'Oitavas',qf:'Quartas',sf:'Semifinal',final:'Final'};
+async function jogos(sel){if(!await need('jogos'))return;let d;try{d=await zfx()}catch(e){app.innerHTML=empty('Erro ao carregar os jogos',esc(e.message));return}
+ const mc=myClub(),my=mc&&mc.id,rs=d.rounds||[];const lr=rs.filter(x=>x.stage==='league').length;
+ let r=+sel;if(!r){const nx=rs.find(x=>x.games.length&&x.games.some(g=>!g.played));r=nx?nx.round:1}
+ const cur=rs[r-1]||{games:[]};const lab=x=>x.stage==='league'?`Rodada ${x.round}`:(STG[x.stage]||x.stage)+(x.label?' · '+x.label:'');
+ let h=`<h2>⚽ Jogos</h2><select onchange="location.hash='#/jogos/'+this.value" style="width:100%;margin-bottom:10px">${rs.map(x=>`<option value="${x.round}" ${x.round===r?'selected':''}>${lab(x)} – ${brt(x.at)}</option>`+(x.win?`<option disabled>── 🔨 Janela: leilão + mercado (${new Date(x.win.auction_start).toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'}).slice(0,5)}–${new Date(x.win.market_close).toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'}).slice(0,5)}) ──</option>`:'')).join('')}</select>`;
+ h+=`<p class="sub" style="font-size:13px">${lab(cur)} · ${brt(cur.at)} (horário de Brasília)${cur.stage==='league'?` · ${lr} rodadas na fase de liga`:''}</p>`;
+ const gs=[...cur.games].sort((a,b)=>(b.home===my||b.away===my)-(a.home===my||a.away===my));
+ h+=gs.length?`<div class="zg">${gs.map(m=>{const me=my&&(m.home===my||m.away===my);return `<div class="mc" ${m.id?`onclick="location.hash='#/jogo/${m.id}'" style="cursor:pointer;${me?'outline:2px solid #D4AF37':''}"`:me?'style="outline:2px solid #D4AF37"':''}><div class="tm">${badge(m.home_name)}<span class="nm">${esc(m.home_name)}</span></div><div class="sc">${m.played?`${m.hg} × ${m.ag}`:'×'}<span class="st">${m.played?'Encerrado'+(m.pens?' (pên.)':''):'Agendado'}</span></div><div class="tm r"><span class="nm">${esc(m.away_name)}</span>${badge(m.away_name)}</div></div>`}).join('')}</div>`:empty('Confrontos a definir','Esta fase depende da classificação.');
+ const W=rs.map(x=>x.win&&{...x.win,round:x.round}).filter(Boolean),ft=x=>new Date(x).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+ h+=W.length?`<h3 style="margin-top:18px">🗓️ Pausas do calendário</h3>`+W.map(w=>`<div class="card warn" style="margin:8px 0"><b>🔨 Janela após a ${w.stage==='end'?'fase de liga (rodada '+w.round+')':'rodada '+w.round}: leilão + mercado</b><div class="sub" style="font-size:13px">Leilão ${ft(w.auction_start)} → ${ft(w.auction_close)} · Mercado até ${ft(w.market_close)} · sem jogos nesse período</div></div>`).join(''):'';
+ app.innerHTML=h}
+let TBc={},TBt=0,TBview='geral';
+const TB_VIEWS=[['geral','Geral'],['home','Em casa'],['away','Fora'],['turno1','1º turno'],['turno2','2º turno']];
+async function tabela(view){if(!await need('tabela'))return;const c=OV.comp,mc=myClub();
+ const v=TB_VIEWS.some(x=>x[0]===view)?view:'geral';TBview=v;
+ let rows=null,meta={league_rounds:39,turno1_end:19,turno1:'1–19',turno2:'20–39'};
+ try{if(c){const hit=TBc[v],stale=!hit||Date.now()-(hit._t||0)>60e3;if(stale){const d=await get(`${R()}/comp/${c.id}/table?view=${encodeURIComponent(v)}`);TBc[v]={...d,_t:Date.now()};if(d.meta)meta=d.meta}else if(hit.meta)meta=hit.meta;rows=TBc[v].rows}}catch(e){}
+ if(!rows)rows=[...OV.clubs].sort((a,b)=>a.name.localeCompare(b.name)).map((x,i)=>({club_id:x.id,name:x.name,manager:x.manager,pts:0,j:0,v:0,e:0,d:0,gp:0,gc:0,form:[],zone:v==='geral'?(i<8?'oitavas':i<24?'playin':''):null}));
+ const showZones=v==='geral';
+ const fm=f=>(f||[]).map(x=>{const k=String(x).toUpperCase()[0];return `<span style="display:inline-block;width:14px;height:14px;border-radius:3px;font-size:10px;line-height:14px;text-align:center;color:#fff;background:${k==='V'||k==='W'?'#2E9E4F':k==='E'?'#6B6B6B':'#C62828'}">${k==='W'?'V':k}</span>`}).join(' ');
+ const filt=`<div class="chips" style="margin:8px 0 12px">${TB_VIEWS.map(([k,lab])=>`<a class="chip ${v===k?'on':''}" href="#/tabela/${k}">${lab}</a>`).join('')}</div>`;
+ const hint=v==='turno1'?`1º turno · rodadas ${meta.turno1||'1–19'}`:v==='turno2'?`2º turno · rodadas ${meta.turno2||'20–39'}`:v==='home'?'Só jogos em casa':v==='away'?'Só jogos fora':'Classificação geral';
+ let h=`<h2>📑 Tabela</h2>${filt}<p class="sub" style="font-size:13px;margin-top:-4px">${hint}${c?'':'. A temporada ainda não começou: todos com 0 pontos.'}</p><div class="tw"><table><tr><th>#</th><th>Clube</th><th>Técnico</th><th>P</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th><th>Últ. 5</th></tr>${rows.map((x,i)=>`<tr class="${showZones&&x.zone==='oitavas'?'zone-o':showZones&&x.zone==='playin'?'zone-p':''}" ${mc&&x.club_id===mc.id?'style="outline:2px solid #D4AF37"':''}><td>${i+1}</td><td style="display:flex;align-items:center;gap:6px">${badge(x.name)} ${esc(x.name)}</td><td>${x.manager?esc(x.manager):'—'}</td><td><b>${x.pts}</b>${x.penalty?`<div class="no" style="font-size:11px">-${x.penalty}</div>`:''}</td><td>${x.j}</td><td>${x.v}</td><td>${x.e}</td><td>${x.d}</td><td>${x.gp}</td><td>${x.gc}</td><td>${x.gp-x.gc}</td><td style="white-space:nowrap">${fm(x.form)}</td></tr>`).join('')}</table></div><p class="sub" style="font-size:12px">${showZones?'<span style="color:#D4AF37">■</span> 1º–8º vão direto às oitavas · <span style="color:#C5C5C5">■</span> 9º–24º jogam os playoffs (9×24, 10×23…) em ida e volta · ':''}<a href="#/matamata">Ver mata-mata</a></p>`;
+ app.innerHTML=h}
+window.zSim=async(force)=>{const bad=OV.clubs.filter(c=>c.manager&&!c.meta.ok);
+ if(bad.length&&!force){document.getElementById('zwarn').innerHTML=`<div class="card warn" style="margin-bottom:12px"><div class="kick">⚠ Meta do onze</div><p>Clubes humanos abaixo da meta (${OV.meta_need} contratados no XI):</p>${bad.map(c=>`<div class="mgr" style="padding:4px 0">${esc(c.name)} · ${esc(c.manager)} <b class="no">${c.meta.n}/${c.meta.need}</b></div>`).join('')}<button class="btn" style="margin-top:10px" onclick="zSim(1)">Simular mesmo assim</button></div>`;return}
+ try{await post(R()+'/advance',{});}catch(e){return alert(e.message)}route();};
+
+// ---------- MERCADO ----------
+let MS={sub:'todos',chip:'',q:'',pos:'',club:'',a1:'',a2:'',o1:'',o2:'',p1:'',p2:'',page:0,list:[]};
+const SEG=()=>`<div class="seg"><a href="#/mercado/todos" class="${!['livres','contratacoes'].includes(MS.sub)?'on':''}">Todos os jogadores</a><a href="#/mercado/livres" class="${MS.sub==='livres'?'on':''}">Livres <span id="nfree"></span></a><a href="#/mercado/contratacoes" class="${MS.sub==='contratacoes'?'on':''}">✍️ Contratações</a></div>`;
+async function zMercado(sub){if(!await need('mercado'))return;if(sub)MS.sub=sub;if(MS.sub==='contratacoes')return contratacoes(1);
+ let mk;try{mk=await get(R()+'/market')}catch(e){mk={}}let reserved=0;try{const o=await get(R()+'/market/offers');reserved=(o.sent||[]).filter(x=>['pending','countered','club_accepted'].includes(x.status)).reduce((a,x)=>a+(+x.fee||0),0)}catch(e){}
+ const me=mk.me||{};let si=0;try{si=(await get(R()+'/zc/signings')).in.length}catch(e){}
+ app.innerHTML=`<div class="hero"><div class="kick">Mercado · ${mk.window?.paused_for_auction||mk.window?.auction?'fechado até o fim do leilão':mk.window?.open?'aberto':'fechado'}</div><h1>Mercado</h1>${mk.window?.paused_for_auction||mk.window?.auction?`<div class="card warn" style="margin:10px 0"><b>Mercado fechado até o fim do leilão</b><p style="margin:6px 0 0">Propostas, contrapropostas e aceites ficam pausados. As propostas pendentes não foram apagadas e voltam a valer quando o leilão terminar.</p><a class="btn sec" href="#/leilao">Ir ao leilão</a></div>`:''}<div class="z3"><div class="stat"><span>Orçamento</span><b>${mi(me.budget)}</b></div><div class="stat"><span>Reservado em propostas</span><b>${mi(me.reserved??reserved)}</b></div><div class="stat"><span>Disponível</span><b class="${(me.available??0)<=0?'no':''}">${mi(me.available??(me.budget-reserved))}</b></div><div class="stat"><span>Jogadores na base</span><b>${me.squad_size??'—'}</b></div></div>${calBox()}</div>
+ ${SEG()}
+ ${preBox()}<div class="chips"><span class="chip ${MS.chip==='venda'?'on':''}" onclick="zChip('venda')">🤝 Negociáveis</span><span class="chip ${MS.chip==='obs'?'on':''}" onclick="zChip('obs')">👁 Observados</span><a class="chip" href="#/negociacoes">🤝 Negociações${mk.counts?.received+mk.counts?.to_act?` (${mk.counts.received+mk.counts.to_act})`:''}</a></div>
+ <div class="bar" style="flex-direction:column"><input id="mq" placeholder="Buscar jogador ou clube" value="${esc(MS.q)}" onkeydown="if(event.key==='Enter')zBusca()">
+ <div class="zfg"><div class="zf"><span>Posição</span><select id="mpos"><option value="">Todas</option>${(typeof POS!=='undefined'?POS:['GOL','LD','ADD','ZAG','LE','ADE','VOL','MC','MEI','MD','ME','PD','PE','SA','ATA']).map(p=>`<option ${MS.pos===p?'selected':''}>${p}</option>`).join('')}</select></div>
+ <div class="zf"><span>Clubes</span><select id="mclub"><option value="">Todos os clubes</option><option value="free" ${MS.club==='free'?'selected':''}>🆓 Livres (dispensados)</option>${OV.clubs.map(c=>`<option value="${c.id}" ${+MS.club===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div>
+ <div class="zf"><span>Idade</span><div class="zr"><input id="ma1" type="number" inputmode="numeric" placeholder="mín" value="${MS.a1}"><b>–</b><input id="ma2" type="number" inputmode="numeric" placeholder="máx" value="${MS.a2}"></div></div><div class="zf"><span>Overall</span><div class="zr"><input id="mo1" type="number" inputmode="numeric" placeholder="mín" value="${MS.o1}"><b>–</b><input id="mo2" type="number" inputmode="numeric" placeholder="máx" value="${MS.o2}"></div></div><div class="zf"><span>Potencial</span><div class="zr"><input id="mp1" type="number" inputmode="numeric" placeholder="mín" value="${MS.p1}"><b>–</b><input id="mp2" type="number" inputmode="numeric" placeholder="máx" value="${MS.p2}"></div></div><div class="zf"><span>&nbsp;</span><button class="btn" style="width:100%" onclick="zBusca()">Buscar</button></div></div></div>
+ <div id="mres"><div class="empty">Carregando…</div></div>`;
+ zBusca(true);}
+window.zChip=c=>{MS.chip=MS.chip===c?'':c;MS.page=0;zMercado();};
+window.zBusca=async(keep)=>{const g=id=>document.getElementById(id);if(g('mq')){MS.q=g('mq').value.trim();MS.pos=g('mpos').value;MS.club=g('mclub').value;for(const k of ['a1','a2','o1','o2','p1','p2'])MS[k]=g('m'+k).value;}if(keep!==true)MS.page=0;
+ let q=MS.q;const cm=q&&OV.clubs.find(c=>c.name.toLowerCase().includes(q.toLowerCase()));const club=MS.club||(cm?cm.id:'');if(cm&&!MS.club)q='';
+ const p=new URLSearchParams();if(q)p.set('q',q);if(MS.pos)p.set('pos',MS.pos);if(club)p.set('club',club);for(const [k,n] of [['a1','minAge'],['a2','maxAge'],['o1','minOvr'],['o2','maxOvr'],['p1','minPot'],['p2','maxPot']])if(MS[k]!=='')p.set(n,MS[k]);if(MS.sub==='livres')p.set('free','1');if(MS.chip==='venda')p.set('listed','1');
+ try{let L;if(MS.chip==='obs'){L=await get(R()+'/market/watch');if(!Array.isArray(L))L=L.players||L.list||[]}else L=await get(R()+'/market/search?'+p);MS.list=L;
+  if(MS.sub==='livres'){const n=document.getElementById('nfree');if(n)n.textContent='('+L.length+')'}zPage(0);}catch(e){document.getElementById('mres').innerHTML=empty('Erro',esc(e.message))}};
+window.zPage=d=>{MS.page=Math.max(0,Math.min(MS.page+d,Math.ceil(MS.list.length/20)-1));const L=MS.list.slice(MS.page*20,MS.page*20+20),el=document.getElementById('mres');if(!el)return;
+ el.innerHTML=MS.list.length?`<div class="card" style="padding:0">${L.map(p=>`<div class="pl" onclick="negociar(${p.id})">${psq(p)}<div class="i"><b>${esc(p.name)}</b><span>${esc(p.club||'')}${p.manager?' · '+esc(p.manager):''} · ${p.age??'—'} anos${p.listed?' · <b style="color:#D4AF37">🤝 Negociável</b>':''}${p.shielded?' · <b style="color:#E8E8E8">🛡️ Blindado</b>':''}</span>${MS.chip==='obs'?`<button class="btn ghost" style="padding:2px 8px;margin-top:4px;font-size:12px" onclick="event.stopPropagation();zDesobs(${p.id})">✕ Parar de observar</button>`:''}</div><div style="text-align:right"><span class="ovr o${p.overall>=85?1:p.overall>=78?2:p.overall>=70?3:4}">${p.overall}${pt(p)}</span><div class="sub" style="margin:2px 0 0;font-size:12px">${mi(p.market_value)}</div></div></div>`).join('')}</div>
+ <div class="pager"><button class="btn ghost" onclick="zPage(-1)" ${MS.page?'':'disabled'}>‹ Anterior</button><span class="sub" style="margin:0">Página ${MS.page+1} de ${Math.ceil(MS.list.length/20)} · ${MS.list.length} jogadores</span><button class="btn ghost" onclick="zPage(1)" ${(MS.page+1)*20<MS.list.length?'':'disabled'}>Próxima ›</button></div>`:empty('Nenhum jogador','Ajuste os filtros da busca.');};
+
+// ---------- NEGOCIAÇÕES (propostas) ----------
+async function negociacoes(){if(!await need('mercado'))return;let o;try{o=await get(R()+'/market/offers')}catch(e){app.innerHTML=empty('Mercado indisponível',esc(e.message));return}
+ const st={pending:'Aguardando',countered:'Contraproposta',club_accepted:'Clube aceitou – contrato',accepted:'Concluída',rejected:'Recusada',withdrawn:'Retirada',expired:'Expirada',done:'Concluída'};
+ const row=(x,rec)=>`<div class="card" style="margin-bottom:8px"><div class="mgr"><b>${esc(x.player)} <span class="tag">${x.player_ovr||''}</span></b><span class="tag">${st[x.status]||x.status}</span></div><div class="sub" style="margin:4px 0">${rec?esc(x.buyer)+' → você':'você → '+esc(x.seller)} · ${x.loan?'Empréstimo':'Compra'} · ${mi(x.fee)}${x.counter_fee?' · contra: '+mi(x.counter_fee):''}</div>
+ ${(x.history||[]).length?`<div class="zh">${x.history.map(h=>`<div><span>${esc(h.club||h.by)}</span> · ${esc(h.act)}${h.fee?' <b>'+mi(h.fee)+'</b>':''}${h.at?' <i>'+new Date(h.at).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+'</i>':''}</div>`).join('')}</div>`:''}${(rec&&x.status==='pending')||(!rec&&x.status==='countered')?`<div class="sub" style="margin:2px 0 6px">${rec?'Oferta atual: <b>'+mi(x.fee)+'</b>':'Pedido do clube: <b>'+mi(x.counter_fee)+'</b>'} · máximo permitido (6x o valor): ${mi(x.max_fee)}</div>`:''}
+ <div style="display:flex;gap:6px;flex-wrap:wrap">${(rec&&x.status==='pending')||(!rec&&x.status==='countered')?`<button class="btn green" onclick="zResp(${x.id},'accept')">Aceitar${!rec?' '+mi(x.counter_fee):''}</button><button class="btn" onclick="zResp(${x.id},'counter',${x.max_fee||0})">Contrapropor</button><button class="btn red" onclick="zResp(${x.id},'reject')">Recusar</button>`:''}${!rec&&x.status==='club_accepted'?`<span class="muted">Aceita — aguardando a administração</span>`:''}${!rec&&['pending','countered','club_accepted'].includes(x.status)?`<button class="btn ghost" onclick="retirar(${x.id})">Retirar</button>`:''}</div></div>`;
+ app.innerHTML=`<h1>Negociações</h1><a class="back" href="#/mercado">← Mercado</a><h2>Recebidas</h2>${o.received.length?o.received.map(x=>row(x,1)).join(''):empty('Nenhuma proposta recebida')}<h2>Enviadas</h2>${o.sent.length?o.sent.map(x=>row(x,0)).join(''):empty('Nenhuma proposta enviada')}`;}
+
+window.zResp=async(id,action,max)=>{let fee;if(action==='counter'){const v=prompt('Valor da contraproposta em milhões de € (ex.: 12,5)'+(max?`\nMáximo permitido: ${mi(max)} (6x o valor do jogador)`:''));if(!v)return;fee=miParse(v);if(!(fee>0))return alert('Valor inválido');if(max&&fee>max)return alert(`Acima do limite: o máximo é ${mi(max)} (6x o valor do jogador).`);}
+ else if(action==='reject'&&!confirm('Recusar e encerrar a negociação?'))return;
+ try{const r=await post(R()+`/market/offer/${id}/respond`,{action,fee});alert(r.message||'OK');if(r.offer?.status==='done'){alert((r.message||'')+' Transferência concluída, caixa atualizado.');return location.reload();}}catch(e){alert(e.message)}negociacoes();};
+// ---------- CONTRATAÇÕES ----------
+async function contratacoes(emb){if(!emb)return location.hash='#/mercado/contratacoes';const H0=`<div class="hero"><div class="kick">Mercado</div><h1>Contratações</h1></div>`+SEG();if(!OV.me.club_id){app.innerHTML=H0+noClub();return}const s=await get(R()+'/zc/signings'),m=s.meta;
+ const it=x=>`<div class="pl">${psq(x)}<div class="i"><b>${esc(x.player||x.name)}</b><span>${esc(x.from||'')} → ${esc(x.to||'')} · ${x.kind||''}${x.quando?' · '+esc(x.quando):''}${trSt(x)}${x.loan_left!=null?` · <b style="color:#D4AF37">volta em ${x.loan_left} rodada(s)</b>`:''}</span></div><b>${mi(x.fee)}</b></div>`;
+ app.innerHTML=SEG()+`<div class="hero" style="margin-top:12px"><div class="kick">Meta do onze</div><h1>${m.n}/${m.need} no XI</h1><p>${m.ok?'<b class="ok">✔ Meta cumprida.</b>':`<b class="no">Faltam ${m.need-m.n} contratados entre os titulares.</b>`} Somente jogadores contratados por você no campeonato contam.</p><a class="btn sec" href="#/escalacao">Ajustar escalação</a></div>
+ <h2>Contratados (${s.in.length})</h2>${s.in.length?`<div class="card" style="padding:0">${s.in.map(it).join('')}</div>`:empty('Nenhuma contratação','Vá ao <a href="#/mercado">Mercado</a> para reforçar o elenco.')}
+ <h2>Vendidos / cedidos (${s.out.length})</h2>${s.out.length?`<div class="card" style="padding:0">${s.out.map(it).join('')}</div>`:empty('Nenhuma saída')}`;}
+
+// ---------- ESCALAÇÃO ----------
+let XI=null;
+const XYP={GOL:[50,5],ZAG:[50,20],LD:[86,26],LE:[14,26],ADD:[86,40],ADE:[14,40],VOL:[50,38],MC:[50,52],MD:[84,56],ME:[16,56],MEI:[50,68],PD:[82,78],PE:[18,78],SA:[50,80],ATA:[50,88]};
+const SECP={GOL:'GK',ZAG:'DEF',LD:'DEF',LE:'DEF',ADD:'DEF',ADE:'DEF',VOL:'MID',MC:'MID',MEI:'MID',MD:'MID',ME:'MID',PD:'ATT',PE:'ATT',SA:'ATT',ATA:'ATT'};
+function fit1(pp,sl){if(!pp)return .8;if(pp===sl)return 1;if((pp==='GOL')!==(sl==='GOL'))return .45;if(sl==='VOL'&&pp==='MC')return 1;const a=XYP[pp]||[50,50],b=XYP[sl]||[50,50];return Math.max(.7,1-Math.hypot(a[0]-b[0],a[1]-b[1])*.0042);}
+function zFit(p,sl){let f=fit1(p.primary_position,sl);for(const q of (p.positions||[]))if(q!==p.primary_position)f=Math.max(f,fit1(q,sl));return f;}
+function zAssign(ids,f){const sl=XI.l.slots[f],P=ids.map(id=>XI.by.get(id)).filter(Boolean),pairs=[];sl.forEach((s,i)=>P.forEach(p=>pairs.push([zFit(p,s[0]),p.overall,i,p])));pairs.sort((a,b)=>b[0]-a[0]||b[1]-a[1]);
+ const out=new Array(sl.length).fill(null),u=new Set();for(const [,,i,p] of pairs){if(out[i]||u.has(p))continue;out[i]=p;u.add(p);}return out.map(p=>p?p.id:null);}
+// Nome completo se couber na plaquinha; só encurta (J. Jesus, Di María) quando transborda.
+const NAMEPART=/^(da|das|de|do|dos|del|di|la|le|van|von|el)$/i;
+function shortSurname(n){const t=String(n||'').trim();if(!t)return '—';const w=t.split(/\s+/);if(w.length<2)return t;if(NAMEPART.test(w[w.length-2])){const two=w.slice(-2).join(' ');if(two.length<=16)return two;}const last=w[w.length-1].length>2?w[w.length-1]:w.slice(-2).join(' ');const short=w[0][0]+'. '+last;return short.length<=16?short:last;}
+const surname=n=>{const t=String(n||'').trim();if(!t)return '—';const w=t.split(/\s+/);if(w.length<2||t.length<=18)return t;return shortSurname(t);};
+function fitKitNames(root){(root||document).querySelectorAll('.knm-t').forEach(el=>{const full=el.getAttribute('data-full')||el.textContent,short=el.getAttribute('data-short')||full;el.textContent=full;if(short!==full&&el.scrollWidth>el.clientWidth+0.5)el.textContent=short;});}
+const tier=o=>o>=85?'t1':o>=80?'t2':o>=75?'t3':o>=70?'t4':'t5';
+
+const KITFB={primary:'#FFFFFF',secondary:'#111111',number:'#111111',gk_primary:'#1B5E20',gk_secondary:'#0D3B12',gk_number:'#FFFFFF'};
+function kitOf(l){return l&&l.kit?l.kit:KITFB;}
+function shirtCols(kit,gk){kit=kit||KITFB;return gk?{p:kit.gk_primary,s:kit.gk_secondary,n:kit.gk_number}:{p:kit.primary,s:kit.secondary,n:kit.number};}
+function shirtSVG(num,kit,gk){const c=shirtCols(kit,gk);const n=num==null||num==='—'?'':String(num);
+ const fs=n.length>2?30:n.length>1?36:42;
+ return `<svg class="shirt" viewBox="0 0 100 110" aria-hidden="true"><path fill="${c.s}" d="M20 28 L5 38 L12 60 L27 48 Z"/><path fill="${c.s}" d="M80 28 L95 38 L88 60 L73 48 Z"/><path fill="${c.p}" d="M27 26 C29 13 38 7 50 7 C62 7 71 13 73 26 L85 31 L77 50 L77 96 C77 103 50 108 50 108 C50 108 23 103 23 96 L23 50 L15 31 Z"/><path fill="${c.s}" d="M38 15 Q50 26 62 15 Q58 11 50 10 Q42 11 38 15 Z"/><path fill="none" stroke="rgba(0,0,0,.25)" stroke-width="1.2" d="M40 16 Q50 23 60 16"/><text x="50" y="68" text-anchor="middle" font-family="Oswald,'Barlow Condensed',sans-serif" font-size="${fs}" font-weight="700" fill="${c.n}">${esc(n)}</text></svg>`;}
+function kpos(pos){const bg=pc(pos),fg=bg==='#FFFFFF'?'#000':'#fff';return `<span class="kpos psq" style="background:${bg};color:${fg}">${esc(pos||'—')}</span>`;}
+function kitOvr(p){if(!p||p.overall==null||p.overall==='')return '';const n=+p.overall;if(!Number.isFinite(n)||n<=0)return '';return `<span class="kovr">${esc(String(n))}</span>`;}
+function kitPos(x,y,sl){const raw=[...new Set((sl||[]).map(s=>+s[2]))].sort((a,b)=>a-b);const ys=[];for(const v of raw){if(!ys.length||v-ys[ys.length-1]>3)ys.push(v);}let band=ys[0]||0,bd=1e9;for(const v of ys){const d=Math.abs(v-(+y||0));if(d<bd){bd=d;band=v;}}let t;if(ys.length>1){t=ys.indexOf(band)/(ys.length-1);}else t=Math.max(0,Math.min(1,(+y||0)/100));return {left:50+(x-50)*(1-t*.14),bottom:6+t*64,scale:1-t*.08,t};}
+function pitchAspect(){const w=typeof innerWidth==='number'?innerWidth:1200;return w<=380?1/2:w<=700?4/7:4/3;}
+function pitchSVG(w,h){w=Math.max(160,+w||800);h=Math.max(160,+h||600);
+ const m=Math.max(12,Math.min(w,h)*0.028),x0=m,y0=m,x1=w-m,y1=h-m,fw=x1-x0,fh=y1-y0,cx=x0+fw/2,mid=y0+fh/2;
+ const paW=40.32/68*fw,paD=16.5/105*fh,gaW=18.32/68*fw,gaD=5.5/105*fh,spotD=11/105*fh,R=9.15/105*fh;
+ const goW=7.32/68*fw,goD=Math.max(7,0.014*fh),cr=Math.max(6,1/105*fh);
+ const paX=cx-paW/2,gaX=cx-gaW/2,goX=cx-goW/2,spotT=y0+spotD,spotB=y1-spotD,sr=Math.max(2.4,R*0.08),pr=Math.max(2,R*0.07);
+ const n=v=>(+v).toFixed(2);
+ return `<svg class="lines" viewBox="0 0 ${n(w)} ${n(h)}" width="100%" height="100%" preserveAspectRatio="none" aria-hidden="true">
+  <defs>
+   <clipPath id="zc-d-top"><rect x="0" y="${n(y0+paD)}" width="${n(w)}" height="${n(h)}"/></clipPath>
+   <clipPath id="zc-d-bot"><rect x="0" y="0" width="${n(w)}" height="${n(y1-paD)}"/></clipPath>
+  </defs>
+  <g class="plines" fill="none">
+   <rect x="${n(x0)}" y="${n(y0)}" width="${n(fw)}" height="${n(fh)}"/>
+   <line x1="${n(x0)}" y1="${n(mid)}" x2="${n(x1)}" y2="${n(mid)}"/>
+   <circle cx="${n(cx)}" cy="${n(mid)}" r="${n(R)}"/>
+   <rect x="${n(paX)}" y="${n(y0)}" width="${n(paW)}" height="${n(paD)}"/>
+   <rect x="${n(gaX)}" y="${n(y0)}" width="${n(gaW)}" height="${n(gaD)}"/>
+   <rect x="${n(paX)}" y="${n(y1-paD)}" width="${n(paW)}" height="${n(paD)}"/>
+   <rect x="${n(gaX)}" y="${n(y1-gaD)}" width="${n(gaW)}" height="${n(gaD)}"/>
+   <circle cx="${n(cx)}" cy="${n(spotT)}" r="${n(R)}" clip-path="url(#zc-d-top)"/>
+   <circle cx="${n(cx)}" cy="${n(spotB)}" r="${n(R)}" clip-path="url(#zc-d-bot)"/>
+   <rect x="${n(goX)}" y="${n(y0-goD)}" width="${n(goW)}" height="${n(goD)}"/>
+   <rect x="${n(goX)}" y="${n(y1)}" width="${n(goW)}" height="${n(goD)}"/>
+   <path d="M ${n(x0)} ${n(y0+cr)} A ${n(cr)} ${n(cr)} 0 0 0 ${n(x0+cr)} ${n(y0)}"/>
+   <path d="M ${n(x1-cr)} ${n(y0)} A ${n(cr)} ${n(cr)} 0 0 0 ${n(x1)} ${n(y0+cr)}"/>
+   <path d="M ${n(x0+cr)} ${n(y1)} A ${n(cr)} ${n(cr)} 0 0 0 ${n(x0)} ${n(y1-cr)}"/>
+   <path d="M ${n(x1)} ${n(y1-cr)} A ${n(cr)} ${n(cr)} 0 0 0 ${n(x1-cr)} ${n(y1)}"/>
+  </g>
+  <g class="pspots">
+   <circle cx="${n(cx)}" cy="${n(mid)}" r="${n(sr)}"/>
+   <circle cx="${n(cx)}" cy="${n(spotT)}" r="${n(pr)}"/>
+   <circle cx="${n(cx)}" cy="${n(spotB)}" r="${n(pr)}"/>
+  </g>
+ </svg>`;}
+function pitchLines(){const el=document.querySelector('.pitch-bed');const w=el&&el.offsetWidth||800,h=el&&el.offsetHeight||600;return pitchSVG(w,h);}
+function layoutKits(){const pitch=document.querySelector('.fifa-pitch .pitch'),bed=document.querySelector('.pitch-bed');if(!pitch||!bed)return;
+ const pr=pitch.getBoundingClientRect();
+ const pt=sel=>{const el=bed.querySelector(sel);if(!el)return null;const b=el.getBoundingClientRect();return {x:b.left+b.width/2,y:b.top+b.height/2};};
+ const tl=pt('.pref.tl'),tr=pt('.pref.tr'),bl=pt('.pref.bl'),br=pt('.pref.br');if(!tl||!tr||!bl||!br)return;
+ pitch.querySelectorAll('.kit[data-fx]').forEach(kit=>{
+  const fx=Math.max(0,Math.min(100,+kit.dataset.fx)),t=+kit.dataset.t||0,u=0.06+t*0.80;
+  const lx=bl.x+(tl.x-bl.x)*u,ly=bl.y+(tl.y-bl.y)*u,rx=br.x+(tr.x-br.x)*u,ry=br.y+(tr.y-br.y)*u;
+  const px=lx+(rx-lx)*(fx/100),py=ly+(ry-ly)*(fx/100);
+  kit.style.left=((px-pr.left)/pr.width*100).toFixed(3)+'%';
+  kit.style.bottom=((pr.bottom-py)/pr.height*100).toFixed(3)+'%';
+ });}
+function paintPitch(){const bed=document.querySelector('.pitch-bed');if(!bed)return;const w=bed.offsetWidth,h=bed.offsetHeight;if(h<2)return;
+ const svg=pitchSVG(w,h),old=bed.querySelector('svg.lines');if(old)old.outerHTML=svg;else bed.insertAdjacentHTML('beforeend',svg);
+ layoutKits();}
+
+function xiPitchHTML(sl,st,kit){kit=kit||KITFB;
+ return `<div class="pitchwrap fifa-pitch"><div class="pitch"><div class="pitch-bed"><i class="pref tl"></i><i class="pref tr"></i><i class="pref bl"></i><i class="pref br"></i>${pitchLines()}</div>
+ <div class="xi-title"><h1>Escalação titular</h1><div class="xi-form">${esc(XI.f)}</div></div>
+ ${sl.map((s,i)=>{const p=st[i],pos=s[0],gk=pos==='GOL',f=p?zFit(p,pos):1,xy=kitPos(s[1],s[2],sl),num=p&&p.number!=null?p.number:'—';
+  const arr=p&&p.evo&&p.evo.dir>0?'<span class="earr" title="Evoluiu">▲</span>':'';
+  const cap=+XI.tk.cap===p?.id?' <i class="cap">C</i>':'';
+  const ovr=kitOvr(p);
+  return `<div class="kit ${XI.sel===i?'sel':''} ${p&&f<.97?'off':''}" style="left:${xy.left}%;bottom:${xy.bottom}%;--kit-s:${xy.scale.toFixed(3)}" data-fx="${s[1]}" data-t="${xy.t}" onclick="zSlot(${i})"><div class="kit-tag"><div class="shirt-wrap">${shirtSVG(num,kit,gk)}</div><div class="kit-top"><span class="kit-top-l">${kpos(pos)}${arr}</span>${ovr}</div><span class="knm">${p?`<span class="knm-t" data-full="${esc(surname(p.name))}" data-short="${esc(shortSurname(p.name))}">${esc(surname(p.name))}</span>`:'—'}${cap}</span></div></div>`;}).join('')}
+ </div>
+ <div class="sub" style="text-align:center;margin:8px 4px">${XI.sel!=null?'<b style="color:#D4AF37">Escolha no banco (ou outro titular) quem entra na vaga de '+sl[XI.sel][0]+'.</b>':'Toque num titular para trocar. A vaga de volante aceita VOL e MC.'}</div></div>`;}
+
+async function zEscalacao(){if(!await need('escalacao'))return;if(!OV.me.club_id){app.innerHTML=noClub();return}
+ const [l,s]=await Promise.all([get(R()+'/lineup'),get(R()+'/zc/signings')]);const signed=new Set(s.in.map(x=>x.player_id));
+ XI={l,f:l.formation,ids:l.placed.map(x=>x.id),signed,need:s.meta.need,tac:{...l.tactics},tk:{...l.takers},sel:null,q:'',pos:'',by:new Map(l.squad.map(p=>[p.id,p]))};drawXI();}
+function zTk(){const ids=new Set(XI.ids);const st=XI.ids.map(id=>XI.by.get(id)).filter(Boolean);for(const k of ['fk','ck','pk','cap'])if(!ids.has(+XI.tk[k])){const s=k==='cap'?[...st].sort((a,b)=>b.age*1.5+b.overall-(a.age*1.5+a.overall)):[...st].filter(p=>p.primary_position!=='GOL').sort((a,b)=>b.overall-a.overall);XI.tk[k]=s[0]?.id;}}
+function drawXI(){const {l,signed,need}=XI;zTk();const sl=l.slots[XI.f];const st=XI.ids.map(id=>XI.by.get(id));const stS=new Set(XI.ids);
+ const n=st.filter(p=>p&&signed.has(p.id)).length;const ovr=Math.round(st.reduce((a,p)=>a+(p?.overall||0),0)/11);
+ const sf={DEF:[],MID:[],ATT:[]};sl.forEach((s,i)=>{const p=st[i];if(p&&sf[SECP[s[0]]])sf[SECP[s[0]]].push(zFit(p,s[0]));});
+ const ind=k=>{const a=sf[k],v=a.length?a.reduce((x,y)=>x+y,0)/a.length:1;const ok=v>=.97;return `<div class="xind ${ok?'ok':'no'}"><span>${{DEF:'Defesa',MID:'Meio',ATT:'Ataque'}[k]}</span><b>${ok?'✓ Na posição':'⚠ Fora de posição −'+Math.round((1-v)*100)+'%'}</b></div>`;};
+ const bench=l.squad.filter(p=>!stS.has(p.id)).filter(p=>(!XI.q||p.name.toLowerCase().includes(XI.q.toLowerCase()))&&(!XI.pos||p.primary_position===XI.pos||(p.positions||[]).includes(XI.pos)));
+ if(XI.sel!=null&&sl[XI.sel]){const sp=sl[XI.sel][0],ok=q=>q===sp||(sp==='VOL'&&q==='MC');const rk=p=>ok(p.primary_position)?0:(p.positions||[]).some(ok)?1:2;bench.sort((a,b)=>rk(a)-rk(b)||b.overall-a.overall);}
+ const C=l.tac_catalog,T=XI.tac;const nS=l.squad.filter(p=>p.shielded).length;
+ const cards=(k,title)=>`<div class="tgrp"><div class="tgt">${title}</div><div class="tcards">${Object.entries(C[k]).map(([v,[nm,ds]])=>`<div class="tcard ${T[k]===v?'on':''}" onclick="zTac('${k}','${v}')"><b>${nm}</b><span>${ds}</span></div>`).join('')}</div></div>`;
+ const opt=k=>`<select onchange="zTkSet('${k}',this.value)">${st.filter(Boolean).map(p=>`<option value="${p.id}" ${+XI.tk[k]===p.id?'selected':''}>${esc(p.name)} (${p.primary_position})</option>`).join('')}</select>`;
+ const prow=(p,btn)=>`<div class="pl">${psq(p)}<div class="i"><b>${esc(p.name)}</b><span>${[p.primary_position,...(p.positions||[]).filter(x=>x!==p.primary_position)].join(' · ')} · ${p.age} anos</span></div><span class="ovr o${p.overall>=85?1:p.overall>=78?2:p.overall>=70?3:4}">${p.overall}${pt(p)}</span>${btn}</div>`;
+ const cr=myClub();
+ app.innerHTML=`<div class="hero xhero"><div class="xtop">${badge(cr.name)}<div style="flex:1;min-width:0"><div class="kick">Escalação</div><h1 style="margin:0">${esc(cr.name)}</h1><div class="sub" style="margin:2px 0 0">${l.custom?'Escalação personalizada':'Auto-escalação'} · OVR ${ovr}</div></div><div class="xovr"><small>OVR</small>${ovr}</div></div>
+  <div class="xinds">${ind('DEF')}${ind('MID')}${ind('ATT')}</div>
+  <p style="margin:8px 0">Meta do onze: <b class="${n>=need?'ok':'no'}">${n}/${need} contratados no XI</b></p>
+  <label class="sub" style="display:block;margin:0 0 4px">Formação</label><div class="xactions"><select id="xf" onchange="zForm(this.value)">${l.formations.map(f=>`<option ${f===XI.f?'selected':''}>${f}</option>`).join('')}</select><button class="btn" onclick="zXI(0)">Salvar escalação e táticas</button><button class="btn sec" onclick="zXI(1)">Escalação automática</button><a class="btn sec" href="#/escalacao/numeros">Mudar número</a></div></div>
+ ${xiPitchHTML(sl,st,kitOf(l))}
+ <div class="card"><h2 style="margin-top:0">Banco de reservas <span class="sub">(${l.squad.length-11})</span></h2><div style="display:flex;gap:6px;margin-bottom:8px"><input id="bq" placeholder="Buscar no banco" value="${esc(XI.q)}" oninput="zQ(this.value)" style="flex:1;min-width:0"><select onchange="zPos(this.value)"><option value="">Todas as posições</option>${Object.keys(SECP).map(k=>`<option ${XI.pos===k?'selected':''}>${k}</option>`).join('')}</select></div>
+  <div id="bench" style="margin:0 -12px">${bench.map(p=>`<div onclick="zBenchPick(${p.id})" class="${XI.sel!=null?'pickable':''}">${prow(p,`<span class="sub" style="margin:0 0 0 6px">${signed.has(p.id)?'🆕':''}${p.shielded?'🛡️':''}${p.listed?'🤝':''}</span>`)}</div>`).join('')||'<div class="sub" style="padding:8px 12px">Ninguém no banco com esse filtro.</div>'}</div></div>
+ <div class="card"><h2 style="margin-top:0">Táticas de jogo</h2><div class="sub">Mentalidade e três setores. Vale na simulação de cada partida.</div>
+  ${cards('m','Mentalidade')}${cards('d','Defesa')}${cards('mi','Meio')}${cards('a','Ataque')}
+  <div class="tplan">Seu plano: <b>${['m','d','mi','a'].map(k=>C[k][T[k]][0]).join(' · ')}</b></div></div>
+ <div class="card"><h2 style="margin-top:0">Cobradores e capitão</h2><div class="sub">Só titulares. Se o escolhido sair do onze, passa para outro automaticamente.</div><div class="tkg"><label>🎯 Batedor de falta${opt('fk')}</label><label>🚩 Escanteio${opt('ck')}</label><label>⚽ Pênalti${opt('pk')}</label><label>©️ Capitão${opt('cap')}</label></div></div>
+ <details class="card" open><summary><h2 style="display:inline">🛡️ Blindagem <span class="sub">${nS}/3</span></h2></summary><div class="sub">Quem estiver blindado não recebe proposta. As ofertas abertas são canceladas e o dinheiro volta.</div><div style="margin:0 -12px">${l.squad.filter(p=>!p.virtual&&p.id>0).map(p=>prow(p,`<button class="btn ${p.shielded?'':'sec'} xb" onclick="zShield(${p.id},${!p.shielded})">${p.shielded?'Desblindar':'Blindar'}</button>`)).join('')}</div></details>
+ <details class="card"><summary><h2 style="display:inline">🤝 Negociáveis <span class="sub">${l.squad.filter(p=>p.listed).length}</span></h2></summary><div class="sub">Negociável aparece com selo no Mercado e no filtro "Negociáveis", para os outros clubes acharem. Não pode estar blindado ao mesmo tempo.</div><div style="margin:0 -12px">${l.squad.filter(p=>!p.virtual&&p.id>0).map(p=>prow(p,`<button class="btn ${p.listed?'':'sec'} xb" onclick="zNeg(${p.id},${!p.listed})">${p.listed?'✓ Negociável':'Negociável'}</button>`)).join('')}</div></details>
+ <details class="card"><summary><h2 style="display:inline">Dispensar jogadores</h2></summary><div style="margin:0 -12px">${l.squad.filter(p=>!p.virtual&&p.id>0).map(p=>prow(p,`<button class="btn ghost xb" onclick="dispensar(${p.id},'${esc(p.name).replace(/'/g,'&#39;')}',${+p.market_value||0})">Dispensar</button>`)).join('')}</div></details>`;fitKitNames();paintPitch();}
+if(!window._xiResize){window._xiResize=1;let _rt;addEventListener('resize',()=>{if(!document.querySelector('.fifa-pitch')||typeof drawXI!=='function'||!window.XI||!XI.l)return;clearTimeout(_rt);_rt=setTimeout(drawXI,120);});}
+window.zPos=v=>{XI.pos=v;drawXI();};window.zQ=v=>{XI.q=v;zBench();};window.zTkSet=(k,v)=>{XI.tk[k]=+v;};
+window.zBench=()=>{const el=document.getElementById('bq');const pos=el.selectionStart;drawXI();const e2=document.getElementById('bq');e2.focus();try{e2.setSelectionRange(pos,pos)}catch(e){}};
+window.zForm=f=>{XI.ids=zAssign(XI.ids,f);XI.f=f;XI.sel=null;drawXI();};
+window.zSlot=i=>{if(XI.sel==null){XI.sel=i;}else if(XI.sel===i){XI.sel=null;}else{const a=XI.ids;[a[XI.sel],a[i]]=[a[i],a[XI.sel]];XI.sel=null;}XI.l.custom=true;drawXI();};
+window.zBenchPick=id=>{if(XI.sel==null)return;XI.ids[XI.sel]=id;XI.sel=null;XI.l.custom=true;drawXI();};
+window.zTac=(k,v)=>{XI.tac[k]=v;drawXI();};
+window.zXI=async auto=>{try{await post(R()+'/lineup',{formation:XI.f,starters:XI.ids,slotted:true,auto:!!auto,tactics:XI.tac,takers:XI.tk});window.toast?toast('Escalação e táticas salvas'):alert('Escalação e táticas salvas');zEscalacao();}catch(e){alert(e.message)}};
+window.zShield=async(id,on)=>{try{const r=await post(R()+'/market/shield/'+id,{on});if(r.cancelled)alert(r.cancelled+' proposta(s) por ele foram canceladas e o dinheiro voltou aos compradores.');zEscalacao();}catch(e){alert(e.message)}};
+window.zNeg=async(id,on)=>{try{await post(R()+'/market/list/'+id,{on});zEscalacao();}catch(e){alert(e.message)}};
+
+// ---------- EMPRÉSTIMOS ----------
+async function emprestimos(){if(!await need('emprestimos'))return;let L=[],o={sent:[],received:[]};let A=[];try{[L,o,A]=await Promise.all([get(R()+'/zc/loanable'),get(R()+'/market/offers'),get(R()+'/zc/loans')])}catch(e){}
+ const lo=[...o.sent,...o.received].filter(x=>x.loan);
+ app.innerHTML=`<div class="hero"><div class="kick">Empréstimos</div><h1>Reservas disponíveis</h1><p>Jogadores fora do XI dos clubes sem técnico. Clique para propor um empréstimo por N rodadas; ao fim do prazo o jogador volta automaticamente.</p></div>
+ <h2>Empréstimos ativos (${A.length})</h2>${A.length?`<div class="card" style="padding:0">${A.map(x=>`<div class="pl">${psq(x)}<div class="i"><b>${esc(x.player)}</b><span>${badge(x.from)} ${esc(x.from)} → ${badge(x.to)} ${esc(x.to)}</span></div><b style="color:#D4AF37;text-align:right">${x.remaining==null?'—':x.remaining+' rod.'}<div class="sub" style="margin:0;font-size:11px">restantes</div></b></div>`).join('')}</div>`:empty('Nenhum empréstimo ativo','Ao propor, marque “Empréstimo” e informe por quantas rodadas. O jogador volta sozinho ao clube de origem.')}
+ ${lo.length?`<h2>Propostas de empréstimo</h2><div class="card" style="padding:0">${lo.map(x=>`<div class="pl"><div class="i"><b>${esc(x.player)}</b><span>${esc(x.seller)} → ${esc(x.buyer)} · ${x.status}</span></div><b>${mi(x.fee)}</b></div>`).join('')}</div>`:''}
+ <input placeholder="Filtrar por nome, posição ou clube" oninput="zLf(this.value)" style="width:100%;margin:10px 0"><div id="lres"></div>`;window._LL=L;zLf('');}
+window.zLf=t=>{t=t.toLowerCase();const L=(window._LL||[]).filter(p=>!t||(p.name+' '+p.pos+' '+p.club).toLowerCase().includes(t)).slice(0,60);
+ document.getElementById('lres').innerHTML=L.length?`<div class="card" style="padding:0">${L.map(p=>`<div class="pl" onclick="negociar(${p.id})">${psq(p)}<div class="i"><b>${esc(p.name)}</b><span>${esc(p.club)} · ${p.age} anos</span></div><span class="ovr">${p.overall}${pt(p)}</span></div>`).join('')}</div>`:empty('Nenhum jogador disponível');};
+
+// ---------- ESTATÍSTICAS ----------
+let EST={stage:'',club:''};
+async function estatisticas(){if(!await need('estatisticas'))return;if(!OV.comp){app.innerHTML=empty('Temporada não iniciada');return}
+ const s=await get(`${R()}/zc/stats?stage=${EST.stage}&club=${EST.club}`);
+ const tb=(t,L,k,lab)=>`<h2>${t}</h2>${L.length?`<div class="card" style="padding:0">${L.map((p,i)=>`<div class="pl"><b style="width:20px">${i+1}</b>${psq(p)}<div class="i"><b>${esc(p.name)}</b><span>${esc(p.club)} · ${p.apps} jogos</span></div><b style="font-size:18px">${p[k]}</b><span class="sub" style="margin:0;font-size:11px">${k==='rating'&&window.mediaRot?mediaRot(p[k]):lab}</span></div>`).join('')}</div>`:empty('Sem dados')}`;
+ app.innerHTML=`<div class="hero"><div class="kick">Estatísticas</div><h1>${s.matches} jogos disputados</h1><div style="display:flex;gap:6px;flex-wrap:wrap"><select onchange="EST_(this.value,null)"><option value="">Todas as fases</option><option value="league" ${EST.stage==='league'?'selected':''}>Fase de liga</option><option value="ko" ${EST.stage==='ko'?'selected':''}>Mata-mata</option></select><select onchange="EST_(null,this.value)"><option value="">Todos os clubes</option>${(s.clubs||OV.clubs).map(c=>`<option value="${c.id}" ${+EST.club===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div></div>
+ ${tb('Artilharia',s.goals||[],'goals','gols')}${tb('Assistências',s.assists||[],'assists','assist.')}${tb(`⭐ Maiores notas médias <span class="sub">(mín. ${s.min_apps||1} jogo${(s.min_apps||1)>1?'s':''})</span>`,s.ratings||[],'rating','nota')}`;}
+window.EST_=(st,c)=>{if(st!==null)EST.stage=st;if(c!==null)EST.club=c;estatisticas();};
+
+// ---------- LEILÃO ----------
+async function leilao(){if(!await need('leilao'))return;const a=await get(R()+'/zc/auction');
+ const sur=a.lots.filter(l=>l.status==='open'&&l.surpresa),op=a.lots.filter(l=>l.status==='open'&&!l.surpresa),done=a.lots.filter(l=>l.status!=='open');const leading=op.find(l=>l.leader_mine)||sur.find(l=>l.leader_mine);const midCd=op.some(l=>l.closes_at);const when=t=>{try{return new Date(t).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}catch(e){return ''}};
+ const title=sur.length&&!a.open?'🔨 Leilão surpresa':a.open?esc(a.cal?.label||'Leilão')+' aberto':a.locked?'🔒 '+esc(a.cal?.label||'Leilão')+' bloqueado':'Leilão fechado';
+ app.innerHTML=`<div class="hero"><div class="kick">Leilão</div><h1>${title}</h1>${a.locked?'<p class="no"><b>Leilão bloqueado: todos podem ver os jogadores, mas ninguém dá lance até um administrador desbloquear na Central da liga.</b></p>':''}<p>Leilão aberto: todo mundo vê o maior lance, quem deu e o histórico. Um novo lance precisa <b>superar o maior lance atual</b>. Cada clube leva <b>no máximo 1 jogador</b> por leilão: enquanto você tiver o maior lance por um jogador, não dá pra dar lance em outro. O valor do seu lance líder fica reservado e volta se alguém superar. <b>O lance não pode ser removido</b>: vale até alguém superar. O leilão volta com todos os jogadores e o <b>último lance</b> de cada um. Fecha às <b>20:25</b> (horário de Brasília); lance nos últimos 60 s prorroga aquele lote por 60 s. Todos os clubes podem dar lance, mas quem lidera um lote não pode lançar em outro. Ninguém pode dar lance acima do que tem disponível. Quando os admins encerram, o maior lance de cada jogador leva.</p>${a.excluded?'<p class="no"><b>Seu clube está entre os 5 maiores overs e não pode dar lance neste leilão.</b></p>':''}${calBox(a.cal)}${a.admin?'<a class="btn sec" href="#/central">Gerenciar na Central</a>':''}</div>
+ ${surBox(a,sur,when,leading)}${sur.length&&!op.length?'':`<h2>Jogadores do leilão (${op.length})</h2>`}${op.length?op.map(l=>{const nx=l.top?l.top.amount+1e5:l.min_bid;return `<div class="card" style="margin-bottom:8px"><div class="pl" style="padding:0;border:0" onclick="negociar(${l.player_id})">${psq(l)}<div class="i"><b>${esc(l.name)}</b><span>${esc(l.pos||'')} · ${l.age||''} anos · mín. ${mi(l.min_bid)}</span></div><span class="ovr">${l.overall||''}${pt(l)}</span></div>
+ <p style="margin:8px 0 4px">${l.top?`Maior lance: <b>${mi(l.top.amount)}</b> · ${badge(l.top.club)} <b>${esc(l.top.club)}</b>${l.leader_mine?' <span class="ok">(você)</span>':''}`:'<span class="sub">Sem lances ainda</span>'}${l.closes_at?` · <span class="sub">fecha em <b data-cd="${l.closes_at}">${surLeft(l.closes_at)}</b></span>`:''}</p>
+ ${l.mine&&a.open?`<p style="margin:2px 0"><span class="sub">Seu lance: <b>${mi(l.mine)}</b></span></p>`:''}
+ ${l.history?.length>1?`<details><summary class="sub">Histórico (${l.bids} lance${l.bids>1?'s':''})</summary>${l.history.map(h=>`<div class="sub">${mi(h.amount)} · ${esc(h.club)} · ${when(h.at)}</div>`).join('')}</details>`:''}
+ <div style="display:flex;gap:6px;margin-top:8px;align-items:center"><input type="text" inputmode="decimal" autocomplete="off" id="b${l.id}" placeholder="Mín. ${(nx/1e6).toFixed(1)} mi" style="flex:1"><button class="btn" onclick="zBid(${l.id})" ${a.open&&!a.excluded&&!l.leader_mine&&!(leading&&leading.id!==l.id)&&!(l.closes_at&&!l.running)?'':'disabled'}>${a.locked?'🔒 Bloqueado':l.leader_mine?'Você lidera':leading&&leading.id!==l.id?'Liderando outro':l.closes_at&&!l.running?'Encerrado':'Dar lance'}</button></div></div>`}).join(''):sur.length?'':empty('Nenhum jogador','Aguardando os administradores escolherem os jogadores.')}
+ ${done.length?`<h2>Encerrados</h2><div class="card" style="padding:0">${done.map(l=>`<div class="pl"><div class="i"><b>${esc(l.name)}</b><span>${l.winner?'Arrematado por '+esc(l.winner):l.locked?'🔒 Travado — aguardando leilão no grupo':'Sem lances válidos'}</span>${l.locked&&a.admin?`<button class="btn" onclick="zcAtribuir(${l.player_id},'${esc(l.name).replace(/'/g,'')}')">Definir clube</button>`:''}</div><b>${l.price?mi(l.price):'—'}</b></div>`).join('')}</div>`:''}`;
+ if(midCd){clearInterval(window._midT);window._midT=setInterval(()=>{if(!location.hash.startsWith('#/leilao'))return clearInterval(window._midT);document.querySelectorAll('[data-cd]').forEach(e=>e.textContent=surLeft(e.dataset.cd));if((window._midN=(window._midN||0)+1)%10===0)leilao();},1000);}
+} 
+// leilão surpresa: cada lote tem prazo próprio; lance no último minuto prorroga 60 s; lance não pode ser retirado; cada clube leva no máx. 1
+const surLeft=t=>{const d=Math.max(0,Date.parse(t)-Date.now()-(window._surSkew||0)),h=Math.floor(d/36e5),m=Math.floor(d%36e5/6e4),s=Math.floor(d%6e4/1e3);return d<=0?'encerrando…':(h?h+'h ':'')+(h||m?String(m).padStart(h?2:1,'0')+'min ':'')+String(s).padStart(2,'0')+'s';};
+function surBox(a,sur,when,leading){if(!sur.length)return '';window._surSkew=a.now?Date.now()-Date.parse(a.now):0;const st=sur.every(l=>l.started),o=sur[0];
+ clearInterval(window._surT);window._surT=setInterval(()=>{if(!location.hash.startsWith('#/leilao'))return clearInterval(window._surT);document.querySelectorAll('[data-cd]').forEach(e=>e.textContent=surLeft(e.dataset.cd));if((window._surN=(window._surN||0)+1)%10===0)leilao();},1000);
+ return `<div class="card warn" style="margin:10px 0"><div class="kick">🔨 Leilão surpresa</div><p style="margin:6px 0 0">${st?'<b>Aberto</b>':'Abre <b>'+when(o.opens_at)+'</b>'} · fecha <b>${when(o.closes_at)}</b> (horário de Brasília). Todos os clubes podem dar lance. Cada clube leva <b>no máximo 1 jogador</b>: enquanto liderar um lote, não dá lance em outro, e quem arrematar um não dá mais lance. Nos últimos 5 minutos (a partir de 11:55 de 30/10), cada lance faz o lote fechar só 60 s depois dele (nunca antes das 12:00); sem lance novo em 60 s, vendido. <b>Lance não pode ser retirado</b>: vale até alguém superar. Sem lance, o jogador fica travado até a administração decidir. Valores em € mi.</p>${a.sur_won?`<p class="ok"><b>Você arrematou ${esc(a.sur_won)}.</b></p>`:''}</div>
+ <h2>Leilão surpresa (${sur.length})</h2>`+sur.map(l=>{const nx=l.top?l.top.amount+1e5:l.min_bid,other=leading&&leading.id!==l.id,can=l.started&&l.running&&!l.leader_mine&&!other&&!a.sur_won&&a.my_club;return `<div class="card" style="margin-bottom:8px"><div class="pl" style="padding:0;border:0" onclick="negociar(${l.player_id})">${psq(l)}<div class="i"><b>${esc(l.name)}</b><span>${esc(l.pos||'')} · ${l.age||''} anos · mín. ${mi(l.min_bid)}</span></div><span class="ovr">${l.overall||''}${pt(l)}</span></div>
+ <p style="margin:8px 0 4px">${l.top?`Maior lance: <b>${mi(l.top.amount)}</b> · ${badge(l.top.club)} <b>${esc(l.top.club)}</b>${l.leader_mine?' <span class="ok">(você)</span>':''}`:'<span class="sub">Sem lances ainda</span>'} · <span class="sub">${l.started?'fecha em <b data-cd="'+l.closes_at+'">'+surLeft(l.closes_at)+'</b>':'abre '+when(l.opens_at)}</span></p>
+ ${l.history?.length?`<details><summary class="sub">Histórico (${l.bids} lance${l.bids>1?'s':''})</summary>${l.history.map(h=>`<div class="sub">${mi(h.amount)} · ${esc(h.club)} · ${when(h.at)}</div>`).join('')}</details>`:''}
+ <div style="display:flex;gap:6px;margin-top:8px;align-items:center"><input type="text" inputmode="decimal" autocomplete="off" id="b${l.id}" placeholder="Mín. ${(nx/1e6).toFixed(1)} mi" style="flex:1"><button class="btn" onclick="zBid(${l.id},1)" ${can?'':'disabled'}>${!l.started?'🔒 Abre '+when(l.opens_at):l.leader_mine?'Você lidera':other?'Liderando outro':a.sur_won?'Já arrematou 1':'Dar lance'}</button></div></div>`}).join('');}
+window.zUnbid=async()=>{alert('O lance não pode ser removido: ele vale até alguém superar.')};
+window.zBid=async(id)=>{const v=miParse(document.getElementById('b'+id).value);if(!(v>0))return alert('Valor inválido. Digite em milhões (€ mi), ex.: 23 ou 23,5');if(!confirm(`Confirmar lance de ${mi(v)}?\n\nO lance NÃO pode ser retirado: vale até alguém superar. Enquanto você tiver o maior lance, não dá pra dar lance em outro jogador.`))return;try{await post(R()+'/zc/auction/bid',{lot_id:id,amount:v});leilao();}catch(e){alert(e.message)}};
+
+// ---------- PREMIAÇÕES ----------
+async function premiacoes(){if(!await need('premiacoes'))return;const P=OV.prizes||[];let rows=[];if(OV.comp)try{rows=(await get(`${R()}/comp/${OV.comp.id}/table`)).rows}catch(e){}
+ const prize=i=>{for(const p of P){const [a,b]=p.range||[p.from,p.to];if(i>=a&&i<=b)return p.amount}return 0};
+ app.innerHTML=`<div class="hero"><div class="kick">Premiações</div><h1>Prêmios da fase de liga</h1><p><b>Por jogo:</b> vitória € 1 mi · empate € 0,3 mi · derrota € 0 — pago no caixa logo após cada partida.</p><p>Prêmios por posição: pagos automaticamente ao fim da rodada 39 e somados à verba do clube.${OV.comp?.prizes_paid?' <b class="ok">✔ Já pagos nesta temporada.</b>':''}</p></div>
+ <div class="tw"><table><tr><th>Posição</th><th>Prêmio</th>${rows.length?'<th>Clube atual</th>':''}</tr>${P.map(p=>{const [a,b]=p.range||[p.from,p.to];return `<tr><td>${a===b?a+'º':a+'º–'+b+'º'}</td><td><b style="color:#D4AF37">${mi(p.amount)}</b></td>${rows.length?`<td>${rows.slice(a-1,b).map(x=>esc(x.name)).slice(0,3).join(', ')}${b-a>2?'…':''}</td>`:''}</tr>`}).join('')}</table></div>`;}
+
+// ---------- CLUBES E VERBAS ----------
+async function clubes(){if(!await need('clubes'))return;
+ app.innerHTML=`<div class="hero"><div class="kick">Clubes e verbas</div><h1>40 clubes</h1><p>Verba atual de cada clube, técnico e situação da meta do onze.</p></div><div class="zg">${OV.clubs.map(c=>`<div class="card"><div class="mgr"><div style="display:flex;gap:8px;align-items:center">${badge(c.name)}<div><b>${esc(c.name)}</b><div class="sub" style="margin:0;font-size:12px">${esc(c.country)} · ${c.squad==='empty'?'elenco em branco':'elenco FC27'}</div></div></div><b style="color:#D4AF37">${mi(c.budget??c.initial)}</b></div><div class="sub" style="margin:8px 0 0;font-size:12px">${c.manager?'👤 '+esc(c.manager)+` · meta <b class="${c.meta.ok?'ok':'no'}">${c.meta.n}/${c.meta.need}</b>`:'🤖 sem técnico'}</div></div>`).join('')}</div>`;}
+
+// ---------- EVOLUÇÃO ----------
+async function evolucao(){if(!await need('evolucao'))return;app.innerHTML=`<div class="hero"><div class="kick">Evolução</div><h1>Evolução dos jogadores</h1><p>${esc(OV.evolution?.description||'')}</p></div><div class="card"><h3>Como funciona</h3><ul><li>Ruim (média abaixo de 6,00): não evolui.</li><li>Jovem (até 21) longe do potencial sobe +1 em: Mediano (6,00–6,35) ~10–11 jogos · Bom (6,35–6,75) ~7–8 · Muito bom (6,75–7,25) ~5–6 · Excelente (7,25+) ~3–4.</li><li>Mais velho demora mais: 24–25 anos ~1,25x · 26–27 ~1,5x · 30–31 ~2x. Com 33 anos ou mais, não evolui.</li><li>Evolui em velocidade normal até o potencial. Só na fase Excelente (7,25+) pode passar 1 do potencial, e esse ponto extra leva 3x mais.</li><li>Ninguém perde over. A evolução é jogo a jogo, com variação natural.</li></ul></div><div id="evoList"><p class="sub">Carregando elenco…</p></div>`;evoList();}
+const EVC={Ruim:'#8A8A8A',Mediano:'#C5C5C5',Bom:'#D4AF37','Muito bom':'#E8C547',Excelente:'#F5E6A3'};
+async function evoList(){const el=document.getElementById('evoList');if(!el)return;try{const d=await get(R()+'/zc/evolucao');
+ if(!d.players.length){el.innerHTML='<div class="card"><p class="sub">Você ainda não comanda um clube.</p></div>';return}
+ el.innerHTML=`<h2 style="margin-top:18px">Seu elenco</h2><p class="sub" style="font-size:12px">A barra mostra quanto falta para o próximo +1 de over.</p>`+d.players.map(p=>{const pc=Math.round(p.acc*100),c=p.blocked?'#555':(EVC[p.tier]||'#D4AF37'),g=p.ovr_start!=null&&p.overall>p.ovr_start?` <span style="color:#D4AF37">(+${p.overall-p.ovr_start})</span>`:'';
+  return `<div class="card" style="padding:10px 12px;margin:6px 0"><div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap"><div><b>${esc(p.name)}</b> <span class="sub" style="font-size:12px">${esc(p.pos||'')} · ${p.age??'?'} anos</span></div>
+  <div style="font-size:13px;white-space:nowrap">OVR <b>${p.overall}</b>${g} · POT <b>${p.potential}</b></div></div>
+  <div style="height:8px;background:#ffffff14;border-radius:6px;overflow:hidden;margin:8px 0 5px"><div style="height:100%;width:${p.blocked?100:pc}%;background:${c};opacity:${p.blocked?.5:1};border-radius:6px"></div></div>
+  <div style="display:flex;justify-content:space-between;gap:8px;font-size:12px;flex-wrap:wrap" class="sub"><span>${p.blocked?esc(p.blocked):`${pc}% para o próximo +1`}</span><span>${p.avg!=null?`Média ${p.avg.toFixed(2).replace('.',',')} (${p.apps} j) · <b style="color:${EVC[p.tier]}">${p.tier}</b>`:'Sem jogos'}</span></div></div>`;}).join('');}
+ catch(e){el.innerHTML=`<div class="card"><p class="sub">Erro ao carregar: ${esc(e.message||'')}</p></div>`;}}
+
+// ---------- CENTRAL DA LIGA (admin) ----------
+async function central(){if(!await need('central'))return;if(!OV.admin){app.innerHTML=empty('Acesso restrito','Somente administradores.');return}
+ const log=await get(R()+'/zc/log');const free=OV.clubs.filter(c=>!c.manager);
+ app.innerHTML=`<div class="hero"><div class="kick">Central da liga</div><h1>Administração</h1><p>${esc(OV.phase)} · ${esc(OV.window?.name||'')}</p>
+ ${calBox()}${calAdmin(OV.cal)}<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${OV.comp?'':'<button class="btn green" onclick="zStart()">▶ Iniciar temporada</button>'}<button class="btn" onclick="zSim()">Simular etapa</button></div><div id="zwarn" style="margin-top:10px"></div></div>
+ <h2>Técnicos e clubes</h2><div class="sub">Todo usuário que entra no app aparece aqui. Escolha o clube de cada técnico.</div><div class="card" style="padding:0">${OV.managers.map(m=>{const mc=m.club_id&&OV.clubs.find(c=>c.id===m.club_id);return `<div class="pl tec"><div class="i"><b>${esc(m.nick)}</b><span>${mc?`⚽ <b class="ok" style="display:inline">${esc(mc.name)}</b>`:'sem clube'}</span></div><select onchange="zAssign(${m.user_id},this.value)">${mc?`<option value="${mc.id}" selected>${esc(mc.name)}</option>`:'<option value="" selected>Definir clube…</option>'}<option value="0">— sem clube —</option>${free.filter(c=>c.id!==m.club_id).map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select>${m.nick!==OV.me.nick?`<button class="btn red" onclick="zRem(${m.user_id})">✕</button>`:''}</div>`}).join('')}</div>
+ <h2>Leilão</h2><div class="card"><div class="mgr"><b id="aust">…</b><span class="sub">${OV.cal?.label?esc(OV.cal.label)+': '+OV.cal.lots+'/'+OV.cal.lots_max+' jogadores':'Sem leilão agora'}</span></div><input placeholder="Buscar jogador dos 40 clubes para o leilão" oninput="zAs(this.value)" style="width:100%;margin:8px 0"><div id="aus"></div><div id="aul"></div></div>
+ <h2>Contestar venda</h2><input id="trq" placeholder="Buscar transferência (jogador ou clube)" oninput="zTr(this.value)" style="width:100%;margin-bottom:8px"><div id="trs"></div>
+ <h2>Log da liga</h2><div class="card">${log.map(e=>`<div class="log">${esc(e.text)}<time>${new Date(e.created_at).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'})}</time></div>`).join('')||'<div class="empty">Sem eventos</div>'}</div>`;zTr('');zAuL();zPre();}
+window.zPre=async()=>{if(OV.room?.status!=='lobby')return;const d=await get(R()+'/preseason');const el=document.getElementById('zwarn');if(!el)return;el.innerHTML=`<div class="card warn"><div class="kick">Meta da pré-temporada: ${d.need} contratações</div>${d.below.length?d.below.map(x=>`<div class="mgr" style="padding:3px 0">${esc(x.club)} <b class="no">${x.n}/${x.need} → -${x.pts} pts e -€ ${x.money/1e6} mi</b></div>`).join(''):'<p class="ok">Todos cumpriram.</p>'}</div>`;};
+window.preBox=()=>{if(OV.room?.status!=='lobby')return '';const c=OV.clubs?.find(x=>x.id===OV.me?.club_id);if(!c?.pre)return '';const p=c.pre;
+ return `<div class="card ${p.miss?'warn':''}" style="margin:10px 0"><div class="kick">Pré-temporada</div><p style="margin:6px 0 0"><b>Contratações: ${p.n}/${p.need}</b> ${p.miss?`<span class="no">faltam ${p.miss}</span>`:'<span class="ok">meta cumprida ✅</span>'}</p><p class="sub" style="margin:4px 0 0">Todo clube precisa contratar ${p.need} jogadores antes do campeonato. Para cada um que faltar quando a temporada começar: <b>-3 pontos</b> e <b>-€ 50 mi</b> no orçamento.${p.miss?` Punição prevista hoje: <b class="no">-${p.pts} pts e -€ ${p.money/1e6} mi</b>.`:''}</p></div>`;};
+window.zStart=async()=>{try{const d=await get(R()+'/preseason');const msg=d.below.length?`Clubes abaixo da meta de ${d.need} contratações (a IA ainda tenta completar os clubes sem técnico antes da checagem):\n\n`+d.below.map(x=>`${x.club}: ${x.n}/${x.need} → -${x.pts} pts e -€ ${x.money/1e6} mi`).join('\n')+'\n\nIniciar a temporada e aplicar as punições?':'Todos cumpriram a meta. Iniciar a temporada?';if(!confirm(msg))return;
+ const r=await post(R()+'/season/start',{confirm:true});alert(`Temporada iniciada. IA fez ${r.ai_signings||0} contratação(ões). `+(r.penalties?.length?'Punidos: '+r.penalties.map(x=>`${x.club} (-${x.pts} pts)`).join(', '):'Ninguém punido.'));central();}catch(e){alert(e.message)}};
+window.zWin=async a=>{try{await post(R()+'/zc/admin/window',{action:a});central();}catch(e){alert(e.message)}};
+window.zAssign=async(u,c)=>{if(c==='')return;try{await post(R()+'/zc/admin/assign',{user_id:u,club_id:+c||null});central();}catch(e){alert(e.message)}};
+window.zRem=async u=>{if(!confirm('Remover este técnico do campeonato?'))return;try{await post(R()+'/zc/admin/remove',{user_id:u});central();}catch(e){alert(e.message)}};
+window.zTr=async t=>{const L=await get(R()+'/zc/admin/transfers?q='+encodeURIComponent(t));const el=document.getElementById('trs');if(!el)return;el.innerHTML=L.length?`<div class="card" style="padding:0">${L.map(x=>`<div class="pl"><div class="i"><b>${esc(x.player)}</b><span>${esc(x.from)} → ${esc(x.to)} · ${mi(x.fee)} · ${esc(x.quando)}${trSt(x)}</span></div>${x.status==='ok'?`<button class="btn red" onclick="zTA(${x.id},'contest')">Contestar</button>`:x.status==='contested'?`<button class="btn sec" onclick="zTA(${x.id},'keep')">Manter</button> <button class="btn red" onclick="zTA(${x.id},'cancel')">Cancelar</button>`:''}</div>`).join('')}</div>`:empty('Nenhuma transferência');};
+window.zTA=async(id,a)=>{const M={contest:'Marcar esta transferência como contestada?',keep:'Manter a transferência e remover a contestação?',cancel:'Cancelar a transferência? O jogador volta ao clube de origem e os valores são devolvidos.'};if(!confirm(M[a]))return;try{await post(R()+'/zc/admin/transfer/'+id+'/'+a,{});const q=document.querySelector('#trq,#trs')&&document.getElementById('trq');zTr(q?q.value:'');}catch(e){alert(e.message)}};
+window.zAuL=async()=>{const a=await get(R()+'/zc/auction');const st=document.getElementById('aust');if(!st)return;st.innerHTML=(a.open?'<span class="ok">Leilão aberto</span>':'<span class="no">Leilão fechado</span>')+(a.cal?.lots_max?` · ${a.cal.lots}/${a.cal.lots_max}`:'');const op=a.lots.filter(l=>l.status==='open');
+ document.getElementById('aul').innerHTML=op.length?op.map(l=>`<div class="pl">${psq(l)}<div class="i"><b>${esc(l.name)}</b><span>${badge(l.from)} ${esc(l.from)} · mín. ${mi(l.min_bid)} · ${l.bids} lance(s)</span></div><button class="btn red" onclick="zAuR(${l.id})">✕</button></div>`).join(''):empty('Nenhum lote','Busque um jogador acima e adicione.');};
+window.zAs=async t=>{const el=document.getElementById('aus');if(!t||t.length<2){el.innerHTML='';return}const L=await get(R()+'/market/search?q='+encodeURIComponent(t));el.innerHTML=L.slice(0,8).map(p=>`<div class="pl">${psq(p)}<div class="i"><b>${esc(p.name)}</b><span>${badge(p.club)} ${esc(p.club||'')} · ${p.overall}${p.potential>p.overall?'↗'+p.potential:''} · ${mi(p.market_value)}</span></div><button class="btn green" onclick="zAuA(${p.id})">+ Lote</button></div>`).join('')||empty('Nenhum jogador');};
+window.zAuA=async id=>{const v=prompt('Lance mínimo em milhões de € (vazio = 50% do valor de mercado)','');if(v===null)return;try{await post(R()+'/zc/admin/auction/add',{player_id:id,min_bid:v?Math.round(+v.replace(',','.')*1e6):null});zAuL();}catch(e){alert(e.message)}};
+window.zAuR=async id=>{try{await post(R()+'/zc/admin/auction/remove',{lot_id:id});zAuL();}catch(e){alert(e.message)}};
+window.zAu=async a=>{if(a==='close'&&!confirm('Encerrar o leilão e transferir os jogadores aos maiores lances?'))return;try{const r=await post(R()+'/zc/admin/auction/state',{action:a});if(a==='close')alert(`Leilão encerrado: ${r.sold} jogador(es) arrematado(s).`);zAuL();}catch(e){alert(e.message)}};
+window.zAdm=async()=>{const el=document.getElementById('adms');if(!el)return;try{const U=await get('/zc/admin/users');el.innerHTML=U.map(u=>`<div class="pl"><div class="i"><b>${u.admin?'⭐ ':''}${esc(u.nick)}</b><span>${u.env?'admin fixo (ADMIN_APELIDOS)':u.admin?'administrador':'usuário'}</span></div>${u.env?'':u.admin?`<button class="btn red" onclick="zRole(${u.id},0)">Remover admin</button>`:`<button class="btn green" onclick="zRole(${u.id},1)">Tornar admin</button>`}</div>`).join('');}catch(e){el.innerHTML=empty('Só administradores globais gerenciam admins',esc(e.message))}};
+window.zRole=async(id,on)=>{try{await post('/zc/admin/role',{user_id:id,admin:!!on});zAdm();}catch(e){alert(e.message)}};
+window.zCon=async id=>{if(!confirm('Desfazer esta venda e devolver o valor?'))return;try{await post(R()+'/zc/admin/contest',{transfer_id:id});central();}catch(e){alert(e.message)}};
+
+// ---------- roteador ----------
+window.mercado=sub=>sub==='propostas'?(location.hash==='#/negociacoes'?negociacoes():location.hash='#/negociacoes'):zMercado(sub);
+
+async function zNumeros(){if(!await need('escalacao'))return;if(!OV.me.club_id){app.innerHTML=noClub();return}
+ const l=await get(R()+'/lineup');const kit=kitOf(l),cr=myClub(),sq=l.squad||[];
+ const row=p=>`<div class="pl">${kpos(p.primary_position)}<div class="i"><b>${esc(p.name)}</b><span>${esc(p.primary_position)} · ${p.age} anos · OVR ${p.overall}</span></div><input type="number" min="1" max="99" id="sn-${p.id}" value="${p.number??''}"></div>`;
+ app.innerHTML=`<div class="hero"><div class="kick">Escalação</div><h1>Mudar número</h1><p>Só o técnico do ${esc(cr.name)} edita os números do próprio elenco. De 1 a 99, sem repetir no clube. As cores da camisa são as oficiais do time e não se alteram.</p>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0"><a class="btn sec" href="#/escalacao">Voltar à escalação</a><button class="btn" onclick="zSaveShirts()">Salvar números</button></div></div>
+ <div class="card kit-edit"><h2 style="margin-top:0">Camisa do clube</h2>
+  <div class="kprev"><figure>${shirtSVG(10,kit,0)}<figcaption>Linha</figcaption></figure><figure>${shirtSVG(1,kit,1)}<figcaption>Goleiro</figcaption></figure></div></div>
+ <div class="card shirt-list"><h2 style="margin-top:0">Números do elenco</h2>${sq.map(row).join('')||'<p class="sub">Nenhum jogador no elenco.</p>'}</div>`;}
+window.zSaveShirts=async()=>{const numbers=[];document.querySelectorAll('input[id^="sn-"]').forEach(el=>{if(el.value!=='')numbers.push({player_id:+el.id.slice(3),number:+el.value});});
+ try{await post(R()+'/zc/shirts',{numbers});window.toast?toast('Números salvos'):alert('Números salvos');zNumeros();}catch(e){alert(e.message)}};
+
+const old=window.route;
+window.route=function(){try{closeM()}catch(e){}scrollTo(0,0);const m=(location.hash.slice(1)||'/').split('/');const t=m[1]||'';
+ const map={'':inicio,inicio,campeonato:()=>campeonato(m[2]),mercado:()=>zMercado(m[2]),negociacoes,contratacoes:()=>location.hash='#/mercado/contratacoes',escalacao:()=>(m[2]==='numeros'||m[2]==='camisa')?zNumeros():zEscalacao(),emprestimos:()=>location.hash='#/mercado',estatisticas,jogos:()=>jogos(m[2]),tabela:()=>tabela(m[2]),leilao,premiacoes,clubes,evolucao,central};
+ if(t==='ligas'){chrome('');return salas();}
+ const OKOLD=['jogo','matamata','bolao','historico','artilharia','como-funciona','clube'];
+ if(!map[t]&&!OKOLD.includes(t))return location.hash='#/';
+ if(map[t]){const pr=map[t]();if(pr&&pr.catch)pr.catch(e=>{console.error(e);window.zFail&&zFail(e&&e.zNet?null:'Algo deu errado ao abrir esta tela: '+esc(e&&e.message||e))});return pr}
+ chrome('');return old();};
+route=window.route;window.zBooted=true;
+window.zcAtribuir=async(pid,nome)=>{const clube=prompt('Clube para '+nome+' (nome exato do clube):');if(!clube)return;const v=prompt('Valor pago em milhões de € (0 se nenhum):','0');if(v===null)return;
+ try{const j=await post(`${R()}/zc/admin/auction/assign`,{player_id:pid,club_name:clube,fee:Math.round((+String(v).replace(',','.')||0)*1e6)});alert(j.player+' agora é do '+j.club);location.reload();}catch(e){alert(e.message)}};
+})();
+
+// ---------- calendário do mercado (fase + contagem regressiva) ----------
+window.calBox=(cal)=>{cal=cal||window.zOV?.cal;if(!cal)return '';const lb=esc(cal.label||'Leilão');
+ if(cal.auction_open)return `<div class="card warn" style="margin:10px 0"><div class="kick">🔨 ${lb}</div><p style="margin:6px 0 0"><b>Mercado fechado até o fim do leilão</b>${cal.auction_until_txt?` · fecha <b>${esc(cal.auction_until_txt)}</b> (horário de Brasília)`:''}. Lance nos últimos 60 s prorroga o lote. Propostas pendentes ficam como estão e voltam a valer quando o leilão terminar.</p><a class="btn sec" href="#/leilao" style="margin-top:8px">Ir ao leilão</a></div>`;
+ if(cal.state==='auction'&&cal.auction_open===false)return `<div class="card warn" style="margin:10px 0"><div class="kick">🔒 Mercado fechado</div><p style="margin:6px 0 0"><b>Leilão encerrado.</b> Abertura do mercado a definir.</p></div>`;
+ if(cal.state==='auction')return `<div class="card warn" style="margin:10px 0"><div class="kick">🔨 ${lb}</div><p style="margin:6px 0 0"><b>Leilão aberto</b> · mercado fechado. Lances visíveis: cada novo lance precisa superar o maior. Cada clube leva no máximo 1 jogador. Os admins encerram e o mercado abre por ${cal.hours>=48?cal.hours/24+' dias':cal.hours+' horas'}.</p>${cal.excl_names?.length?`<p class="sub" style="margin:4px 0 0">Não podem dar lance (5 maiores overs): ${cal.excl_names.map(esc).join(', ')}</p>`:''}<a class="btn sec" href="#/leilao" style="margin-top:8px">Ir ao leilão</a></div>`;
+ if(cal.state==='market')return `<div class="card" style="margin:10px 0;border-color:#D4AF37"><div class="kick">🔓 ${esc(cal.mlabel||'Mercado')}</div><p style="margin:6px 0 0"><b class="ok">Mercado aberto até ${esc(cal.until_txt)}</b> (Brasília) · fecha em <b data-until="${cal.until}">…</b></p></div>`;
+ if(cal.state==='waiting')return `<div class="card warn" style="margin:10px 0"><div class="kick">🔒 Mercado fechado · leilão bloqueado</div><p style="margin:6px 0 0">${cal.lots?'<a href="#/leilao">Ver os jogadores do leilão</a>. ':''}O <b>${lb}</b> está bloqueado até um administrador desbloquear (${cal.lots}/${cal.lots_max} jogadores escolhidos pelos admins). Depois dele o mercado abre por ${cal.hours>=48?cal.hours/24+' dias':cal.hours+' horas'}.${cal.blocks_rounds?' As rodadas ficam paradas até lá.':''}</p>${cal.excl_names?.length?`<p class="sub" style="margin:4px 0 0">Não poderão dar lance (5 maiores médias dos 18 melhores overs${cal.excl_preview?', prévia':''}): ${cal.excl_names.map(esc).join(', ')}</p>`:''}</div>`;
+ return `<div class="card" style="margin:10px 0"><div class="kick">🔒 Mercado fechado</div>${cal.next?`<p class="sub" style="margin:6px 0 0">${esc(cal.next)}</p>`:''}</div>`;};
+window.cdTick=()=>{document.querySelectorAll('[data-until]').forEach(el=>{let s=Math.max(0,Math.floor((new Date(el.dataset.until)-Date.now())/1000));if(!s){el.textContent='fechando…';return}const d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60),x=s%60;el.textContent=(d?d+'d ':'')+String(h).padStart(2,'0')+'h '+String(m).padStart(2,'0')+'m '+String(x).padStart(2,'0')+'s';});};
+if(!window._cdI)window._cdI=setInterval(cdTick,1000);
+window.zCal=async a=>{const M={auction_start:'Desbloquear o leilão agora? Os clubes passam a poder dar lances e não dá mais pra adicionar jogadores.',auction_close:'Encerrar o leilão, entregar os jogadores aos maiores lances e ABRIR O MERCADO com prazo?',open_market:'Pular o leilão e abrir o mercado com prazo?',market_close:'Fechar o mercado AGORA, antes do prazo? Negociações em aberto expiram.'};if(!confirm(M[a]))return;
+ try{const r=await post(R()+'/zc/admin/cal',{action:a});if(a==='auction_close')alert(`Leilão encerrado: ${r.sold} jogador(es) arrematado(s). Mercado aberto.`);central();}catch(e){alert(e.message)}};
+window.calAdmin=cal=>{if(!cal)return '';const b=[];if(cal.state==='waiting'){b.push(`<button class="btn green" onclick="zCal('auction_start')">🔓 Desbloquear leilão</button>`,`<button class="btn sec" onclick="zCal('open_market')">Pular leilão e abrir mercado</button>`);}
+ if(cal.state==='auction')b.push(`<button class="btn red" onclick="zCal('auction_close')">Encerrar leilão e abrir mercado</button>`);if(cal.state==='market')b.push(`<button class="btn red" onclick="zCal('market_close')">Fechar mercado agora</button>`);
+ return b.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${b.join('')}</div>`:'';};
+
+window.zObsRefresh=()=>{if(typeof MS!=='undefined'&&MS.chip==='obs'&&document.getElementById('mres'))zBusca(true);};
+window.zDesobs=id=>fetch('/api'+R()+'/market/watch/'+id,{method:'DELETE',headers:H()}).then(r=>{if(!r.ok)throw new Error('Erro ao remover');zBusca(true)}).catch(e=>alert(e.message));
+
