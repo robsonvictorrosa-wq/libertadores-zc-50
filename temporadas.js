@@ -37,7 +37,8 @@ module.exports=({app,uni,q,pool,auth,wrap,fail,member,R,ready})=>{
   }catch(e){console.error('temporadas boot',e.message)}}
  // ---------- migração única verbas-over-2311 (Robson 23/11, opção B: verba pelo over, inversa) ----------
  // Troca as verbas da sala LIGA e do snapshot inicial (usado pelo reset) pelas de config/libertadores.json.
- // Só roda se não houver contas nem movimentações e se cada verba ainda for exatamente a antiga; senão, avisa no log e não faz nada.
+ // Só roda se não houver transferências, propostas, lances nem competições e se cada verba ainda for exatamente a antiga
+ // (contas e técnicos podem existir e não são alterados); senão, avisa no log e não faz nada.
  async function migVerbasOver2311(){const NAME='verbas-over-2311';try{
   await pool.query('CREATE TABLE IF NOT EXISTS lib_migrations(name TEXT PRIMARY KEY,at TIMESTAMPTZ DEFAULT now())');
   if((await pool.query('SELECT 1 FROM lib_migrations WHERE name=$1',[NAME])).rows.length)return;
@@ -50,8 +51,9 @@ module.exports=({app,uni,q,pool,auth,wrap,fail,member,R,ready})=>{
    const done=()=>c.query('INSERT INTO lib_migrations(name) VALUES($1) ON CONFLICT DO NOTHING',[NAME]);
    if(rc.length===NEW.size&&rc.every(r=>+r.budget===NEW.get(+r.club_id))){await done();await c.query('COMMIT');console.log(NAME,'já estava com as verbas novas (banco novo)');return;}
    const n=async sql=>(await c.query(sql,[room.id])).rows[0].n;
-   const why=[];const users=(await c.query('SELECT count(*)::int n FROM users')).rows[0].n;if(users)why.push(users+' conta(s)');
-   for(const [t,sql] of [['técnicos','SELECT count(*)::int n FROM room_managers WHERE room_id=$1'],['transferências','SELECT count(*)::int n FROM transfers WHERE room_id=$1'],['propostas','SELECT count(*)::int n FROM offers WHERE room_id=$1'],['lances','SELECT count(*)::int n FROM auction_bids b JOIN auction_lots l ON l.id=b.lot_id WHERE l.room_id=$1'],['competições','SELECT count(*)::int n FROM competitions WHERE room_id=$1']]){const k=await n(sql);if(k)why.push(k+' '+t);}
+   // Robson 23/11 11:46: pode rodar com contas/técnicos já criados (eles não são alterados); só trava se houve movimentação de dinheiro
+   const why=[];
+   for(const [t,sql] of [['transferências','SELECT count(*)::int n FROM transfers WHERE room_id=$1'],['propostas','SELECT count(*)::int n FROM offers WHERE room_id=$1'],['lances','SELECT count(*)::int n FROM auction_bids b JOIN auction_lots l ON l.id=b.lot_id WHERE l.room_id=$1'],['competições','SELECT count(*)::int n FROM competitions WHERE room_id=$1']]){const k=await n(sql);if(k)why.push(k+' '+t);}
    if(room.status!=='lobby')why.push('sala em '+room.status);
    const diff=rc.filter(r=>+r.budget!==OLDM.get(+r.club_id));if(diff.length)why.push(diff.length+' verba(s) diferentes da antiga');if(rc.length!==NEW.size)why.push('sala com '+rc.length+'/'+NEW.size+' clubes');
    if(why.length){await c.query('ROLLBACK');console.warn(NAME,'PULADA (nada alterado):',why.join(', '));return;}

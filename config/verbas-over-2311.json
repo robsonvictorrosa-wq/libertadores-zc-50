@@ -1,5 +1,5 @@
 {
- "_doc": "Migração única verbas-over-2311 (Robson 23/11/2026, opção B): verba antiga de cada clube na ordem de config/libertadores.json clubs[] (índice = lib_clubs.ord). A migração só troca as verbas da sala LIGA (e do snapshot inicial do reset) se ainda não houver contas nem movimentações e se cada verba ainda for exatamente a antiga.",
+ "_doc": "Migração única verbas-over-2311 (Robson 23/11/2026, opção B): verba antiga de cada clube na ordem de config/libertadores.json clubs[] (índice = lib_clubs.ord). A migração só troca as verbas da sala LIGA (e do snapshot inicial do reset) se ainda não houver transferências, propostas, lances nem competições (contas e técnicos podem existir) e se cada verba ainda for exatamente a antiga.",
  "old_by_ord": [
   0,
   0,
