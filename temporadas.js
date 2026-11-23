@@ -35,7 +35,35 @@ module.exports=({app,uni,q,pool,auth,wrap,fail,member,R,ready})=>{
     if(room.status==='lobby'&&!cp.n){const c=await pool.connect();try{await c.query('BEGIN');await c.query('SELECT id FROM rooms WHERE id=$1 FOR UPDATE',[room.id]);const x=await saveSnapshot(c,room.id,room.season,null);await c.query('COMMIT');console.log('temporadas: snapshot inicial da temporada',room.season,JSON.stringify(x));}catch(e){await c.query('ROLLBACK');console.error('temporadas snapshot',e.message)}finally{c.release()}}
     else console.warn('temporadas: sem snapshot da temporada',room.season,'(já começou antes deste recurso); reset indisponível nesta temporada');}
   }catch(e){console.error('temporadas boot',e.message)}}
- (ready||Promise.resolve()).then(boot);
+ // ---------- migração única verbas-over-2311 (Robson 23/11, opção B: verba pelo over, inversa) ----------
+ // Troca as verbas da sala LIGA e do snapshot inicial (usado pelo reset) pelas de config/libertadores.json.
+ // Só roda se não houver contas nem movimentações e se cada verba ainda for exatamente a antiga; senão, avisa no log e não faz nada.
+ async function migVerbasOver2311(){const NAME='verbas-over-2311';try{
+  await pool.query('CREATE TABLE IF NOT EXISTS lib_migrations(name TEXT PRIMARY KEY,at TIMESTAMPTZ DEFAULT now())');
+  if((await pool.query('SELECT 1 FROM lib_migrations WHERE name=$1',[NAME])).rows.length)return;
+  const [room]=(await pool.query('SELECT * FROM rooms WHERE code=$1',[A.AG.room||'LIGA'])).rows;if(!room)return;
+  const CF=JSON.parse(require('fs').readFileSync(__dirname+'/config/libertadores.json','utf8'));const OLD=require('./config/verbas-over-2311.json').old_by_ord;
+  const L=uni.prepare('SELECT ord,club_id FROM lib_clubs ORDER BY ord').all();const NEW=new Map(),OLDM=new Map();
+  for(const x of L){NEW.set(+x.club_id,+CF.clubs[x.ord].budget);OLDM.set(+x.club_id,+OLD[x.ord]);}
+  const c=await pool.connect();try{await c.query('BEGIN');await c.query('SELECT id FROM rooms WHERE id=$1 FOR UPDATE',[room.id]);
+   const rc=(await c.query('SELECT club_id,budget FROM room_clubs WHERE room_id=$1 AND club_id=ANY($2::int[])',[room.id,[...NEW.keys()]])).rows;
+   const done=()=>c.query('INSERT INTO lib_migrations(name) VALUES($1) ON CONFLICT DO NOTHING',[NAME]);
+   if(rc.length===NEW.size&&rc.every(r=>+r.budget===NEW.get(+r.club_id))){await done();await c.query('COMMIT');console.log(NAME,'já estava com as verbas novas (banco novo)');return;}
+   const n=async sql=>(await c.query(sql,[room.id])).rows[0].n;
+   const why=[];const users=(await c.query('SELECT count(*)::int n FROM users')).rows[0].n;if(users)why.push(users+' conta(s)');
+   for(const [t,sql] of [['técnicos','SELECT count(*)::int n FROM room_managers WHERE room_id=$1'],['transferências','SELECT count(*)::int n FROM transfers WHERE room_id=$1'],['propostas','SELECT count(*)::int n FROM offers WHERE room_id=$1'],['lances','SELECT count(*)::int n FROM auction_bids b JOIN auction_lots l ON l.id=b.lot_id WHERE l.room_id=$1'],['competições','SELECT count(*)::int n FROM competitions WHERE room_id=$1']]){const k=await n(sql);if(k)why.push(k+' '+t);}
+   if(room.status!=='lobby')why.push('sala em '+room.status);
+   const diff=rc.filter(r=>+r.budget!==OLDM.get(+r.club_id));if(diff.length)why.push(diff.length+' verba(s) diferentes da antiga');if(rc.length!==NEW.size)why.push('sala com '+rc.length+'/'+NEW.size+' clubes');
+   if(why.length){await c.query('ROLLBACK');console.warn(NAME,'PULADA (nada alterado):',why.join(', '));return;}
+   const ids=[...NEW.keys()];await c.query('UPDATE room_clubs rc SET budget=u.b FROM unnest($2::int[],$3::bigint[]) u(c,b) WHERE rc.room_id=$1 AND rc.club_id=u.c',[room.id,ids,ids.map(i=>NEW.get(i))]);
+   await ensureTable(c);const [sn]=(await c.query('SELECT data FROM lib_season_snapshots WHERE room_id=$1 AND season=$2',[room.id,room.season])).rows;let snap=0;
+   if(sn){const d=sn.data;for(const r of (d.tables?.room_clubs||[]))if(NEW.has(+r.club_id)){r.budget=NEW.get(+r.club_id);snap++;}d.migs=[...new Set([...(d.migs||[]),NAME])];
+    await c.query('UPDATE lib_season_snapshots SET data=$3 WHERE room_id=$1 AND season=$2',[room.id,room.season,d]);}
+   await done();await note(c,room.id,'Verbas iniciais refeitas pelo over (maior over, menor verba)');await c.query('COMMIT');
+   console.log(NAME,'OK',JSON.stringify({clubes:ids.length,snapshot:snap,total_mi:ids.reduce((a,i)=>a+NEW.get(i),0)/1e6}));
+  }catch(e){await c.query('ROLLBACK');console.error(NAME,e.message)}finally{c.release()}
+ }catch(e){console.error(NAME,e.message)}}
+ (ready||Promise.resolve()).then(boot).then(migVerbasOver2311);
  // ---------- status para o painel ----------
  app.get('/api/rooms/:code/zc/admin/season',auth,wrap(async(r,s)=>{const room=await member(r);adminOnly(r);await ensureTable(pool);
   const [sn]=await q('SELECT season,created_at,agenda IS NOT NULL custom FROM lib_season_snapshots WHERE room_id=$1 AND season=$2',[room.id,room.season]);

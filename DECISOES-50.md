@@ -1,8 +1,10 @@
 # Libertadores ZC 50 clubes – decisões do Robson (22/11/2026 20:10)
 Horários de Brasília. Agenda automática ainda **pausada** (`"paused": true` em `config/agenda-zc.json`) até o Robson testar; as datas abaixo já estão no arquivo.
 
-## Verba inicial (opção A)
-Os 40 clubes mantêm a verba atual. Novos: Toluca, Cruz Azul, Monterrey € 200 mi · Belgrano, América, Tigres, Independiente Rivadavia, Platense € 300 mi · Huracán, Talleres € 400 mi.
+## Verba inicial pelo over (opção B, Robson 23/11; substitui a opção A de 22/11)
+Maior over, menor verba. Over do time = média dos 18 maiores overs do elenco inicial (mesmo critério da regra original de out/2026). **Verba = €55 mi por ponto de over abaixo do melhor clube (Flamengo, 76,56), arredondada a múltiplo de €25 mi, teto €500 mi.** Total da liga: €12.075 mi (antes €12.150 mi). Tabela completa em `PROPOSTA-VERBAS-OVER.md` (coluna "Alternativa B"); valores em `config/libertadores.json` `clubs[].budget`; `test/zc50.test.js` confere a fórmula contra o `game.db`.
+Exemplos: Flamengo e Palmeiras €0 · River €50 mi · Fluminense, Boca, Atlético-MG, Cruzeiro €75 mi · Botafogo €150 mi · Toluca €175 mi · Cruz Azul €225 mi · Monterrey, Belgrano €250 mi · América, Tigres, Ind. Rivadavia €300 mi · Platense €325 mi · Huracán, Talleres €350 mi · Caracas €500 mi.
+Banco já no ar: migração única `verbas-over-2311` (`temporadas.js`) troca as verbas da sala LIGA e do snapshot inicial do reset. Só roda se não houver contas, técnicos, transferências, propostas, lances nem competições e se cada verba ainda for a antiga (`config/verbas-over-2311.json`); senão, avisa no log e não altera nada.
 
 ## Prêmios por posição (fim da rodada 49)
 1º 100 mi · 2º 50 mi · 3º 30 mi · 4º–8º 20 mi · 9º–24º 10 mi · 25º–50º 0. Por jogo: vitória 1 mi, empate 0,3 mi.

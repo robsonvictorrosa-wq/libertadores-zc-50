@@ -25,7 +25,7 @@
    "country": "Brasil",
    "db": "Fluminense",
    "squad": "file",
-   "budget": 0,
+   "budget": 75000000,
    "alt": 10
   },
   {
@@ -33,7 +33,7 @@
    "country": "Brasil",
    "db": "Botafogo",
    "squad": "file",
-   "budget": 200000000,
+   "budget": 150000000,
    "alt": 10
   },
   {
@@ -41,7 +41,7 @@
    "country": "Brasil",
    "db": "São Paulo",
    "squad": "file",
-   "budget": 100000000,
+   "budget": 125000000,
    "alt": 760
   },
   {
@@ -49,7 +49,7 @@
    "country": "Brasil",
    "db": "Corinthians",
    "squad": "file",
-   "budget": 50000000,
+   "budget": 125000000,
    "alt": 760
   },
   {
@@ -57,7 +57,7 @@
    "country": "Brasil",
    "db": "Atlético-MG",
    "squad": "file",
-   "budget": 0,
+   "budget": 75000000,
    "alt": 850
   },
   {
@@ -65,7 +65,7 @@
    "country": "Brasil",
    "db": "Grêmio",
    "squad": "file",
-   "budget": 50000000,
+   "budget": 125000000,
    "alt": 10
   },
   {
@@ -73,7 +73,7 @@
    "country": "Brasil",
    "db": null,
    "squad": "file",
-   "budget": 100000000,
+   "budget": 125000000,
    "alt": 10
   },
   {
@@ -81,7 +81,7 @@
    "country": "Brasil",
    "db": "Cruzeiro",
    "squad": "file",
-   "budget": 50000000,
+   "budget": 75000000,
    "alt": 850
   },
   {
@@ -97,7 +97,7 @@
    "country": "Brasil",
    "db": "Santos",
    "squad": "file",
-   "budget": 50000000,
+   "budget": 100000000,
    "alt": 5
   },
   {
@@ -105,7 +105,7 @@
    "country": "Brasil",
    "db": "Vasco da Gama",
    "squad": "file",
-   "budget": 100000000,
+   "budget": 125000000,
    "alt": 10
   },
   {
@@ -113,7 +113,7 @@
    "country": "Brasil",
    "db": null,
    "squad": "file",
-   "budget": 100000000,
+   "budget": 150000000,
    "alt": 935
   },
   {
@@ -121,7 +121,7 @@
    "country": "Argentina",
    "db": "River Plate",
    "squad": "db",
-   "budget": 0,
+   "budget": 50000000,
    "alt": 25
   },
   {
@@ -129,7 +129,7 @@
    "country": "Argentina",
    "db": "Boca Juniors",
    "squad": "db",
-   "budget": 50000000,
+   "budget": 75000000,
    "alt": 25
   },
   {
@@ -137,7 +137,7 @@
    "country": "Argentina",
    "db": "Racing Club",
    "squad": "db",
-   "budget": 200000000,
+   "budget": 225000000,
    "alt": 25
   },
   {
@@ -153,7 +153,7 @@
    "country": "Argentina",
    "db": "San Lorenzo",
    "squad": "db",
-   "budget": 300000000,
+   "budget": 325000000,
    "alt": 25
   },
   {
@@ -161,7 +161,7 @@
    "country": "Argentina",
    "db": "Estudiantes",
    "squad": "db",
-   "budget": 100000000,
+   "budget": 150000000,
    "alt": 20
   },
   {
@@ -169,7 +169,7 @@
    "country": "Argentina",
    "db": "Vélez Sarsfield",
    "squad": "db",
-   "budget": 300000000,
+   "budget": 275000000,
    "alt": 25
   },
   {
@@ -177,7 +177,7 @@
    "country": "Argentina",
    "db": "Argentinos Jrs.",
    "squad": "db",
-   "budget": 300000000,
+   "budget": 350000000,
    "alt": 25
   },
   {
@@ -194,7 +194,7 @@
    "db": "Atl. Nacional",
    "squad": "db",
    "crest": "692",
-   "budget": 200000000,
+   "budget": 250000000,
    "alt": 1495
   },
   {
@@ -202,7 +202,7 @@
    "country": "Argentina",
    "db": "Lanús",
    "squad": "db",
-   "budget": 300000000,
+   "budget": 250000000,
    "alt": 25
   },
   {
@@ -218,7 +218,7 @@
    "country": "Colômbia",
    "db": "Indep. Santa Fe",
    "squad": "db",
-   "budget": 400000000,
+   "budget": 300000000,
    "alt": 2640
   },
   {
@@ -226,7 +226,7 @@
    "country": "Chile",
    "db": "Uni. Católica",
    "squad": "db",
-   "budget": 400000000,
+   "budget": 350000000,
    "alt": 570
   },
   {
@@ -234,7 +234,7 @@
    "country": "Chile",
    "db": "Coquimbo Unido",
    "squad": "db",
-   "budget": 500000000,
+   "budget": 425000000,
    "alt": 30
   },
   {
@@ -242,7 +242,7 @@
    "country": "Paraguai",
    "db": "Olimpia",
    "squad": "db",
-   "budget": 300000000,
+   "budget": 325000000,
    "alt": 100
   },
   {
@@ -250,7 +250,7 @@
    "country": "Paraguai",
    "db": "Cerro Porteño",
    "squad": "db",
-   "budget": 300000000,
+   "budget": 325000000,
    "alt": 100
   },
   {
@@ -258,7 +258,7 @@
    "country": "Paraguai",
    "db": "Libertad",
    "squad": "db",
-   "budget": 500000000,
+   "budget": 375000000,
    "alt": 100
   },
   {
@@ -274,7 +274,7 @@
    "country": "Equador",
    "db": "LDU Quito",
    "squad": "db",
-   "budget": 300000000,
+   "budget": 325000000,
    "alt": 2850
   },
   {
@@ -282,7 +282,7 @@
    "country": "Equador",
    "db": "IDV",
    "squad": "db",
-   "budget": 300000000,
+   "budget": 325000000,
    "alt": 2520
   },
   {
@@ -290,7 +290,7 @@
    "country": "Peru",
    "db": "Sporting Cristal",
    "squad": "db",
-   "budget": 400000000,
+   "budget": 375000000,
    "alt": 100
   },
   {
@@ -298,7 +298,7 @@
    "country": "Peru",
    "db": "Universitario",
    "squad": "db",
-   "budget": 500000000,
+   "budget": 350000000,
    "alt": 100
   },
   {
@@ -306,7 +306,7 @@
    "country": "Bolívia",
    "db": "Bolívar",
    "squad": "db",
-   "budget": 500000000,
+   "budget": 375000000,
    "alt": 3640
   },
   {
@@ -344,7 +344,7 @@
     213064
    ],
    "rename_source": "Nacional (POR)",
-   "budget": 400000000,
+   "budget": 300000000,
    "alt": 40
   },
   {
@@ -360,7 +360,7 @@
    "country": "Argentina",
    "db": "Belgrano",
    "squad": "db",
-   "budget": 300000000,
+   "budget": 250000000,
    "alt": 400
   },
   {
@@ -376,7 +376,7 @@
    "country": "Argentina",
    "db": "Platense",
    "squad": "db",
-   "budget": 300000000,
+   "budget": 325000000,
    "alt": 25
   },
   {
@@ -384,7 +384,7 @@
    "country": "Argentina",
    "db": "Huracán",
    "squad": "db",
-   "budget": 400000000,
+   "budget": 350000000,
    "alt": 25
   },
   {
@@ -392,7 +392,7 @@
    "country": "Argentina",
    "db": "Talleres",
    "squad": "db",
-   "budget": 400000000,
+   "budget": 350000000,
    "alt": 450
   },
   {
@@ -400,7 +400,7 @@
    "country": "México",
    "db": "Toluca FC",
    "squad": "db",
-   "budget": 200000000,
+   "budget": 175000000,
    "alt": 2670
   },
   {
@@ -416,7 +416,7 @@
    "country": "México",
    "db": "CF Cruz Azul",
    "squad": "db",
-   "budget": 200000000,
+   "budget": 225000000,
    "alt": 2240
   },
   {
@@ -424,7 +424,7 @@
    "country": "México",
    "db": "Monterrey",
    "squad": "db",
-   "budget": 200000000,
+   "budget": 250000000,
    "alt": 540
   },
   {
@@ -491,8 +491,8 @@
    "_nome": "Conan Ledesma"
   }
  },
- "_doc_budget": "Verba inicial por ranking da média dos 18 maiores overs (out/2026): 5 piores 500M, 5 400M, 10 300M, 5 200M, 5 100M, 5 50M, 5 melhores 0",
+ "_doc_budget": "Verba inicial pelo over (Robson 23/11/2026, opção B, substitui as regras anteriores): verba = €55 mi por ponto de over abaixo do melhor clube (média dos 18 maiores overs do elenco inicial; Flamengo 76,56), arredondada a múltiplo de €25 mi, teto €500 mi. Total €12.075 mi. Ver PROPOSTA-VERBAS-OVER.md.",
  "_doc_alt": "alt: altitude (m) do estádio do mandante. Acima de 1000 m o mandante ganha vantagem e o visitante (de cidade baixa) cansa mais no 2º tempo. Efeito moderado; visitante de altitude sofre pouco.",
- "_doc_50": "Versão 50 clubes (22/11/2026): 10 clubes novos no FIM da lista (mantém os ids). Verbas aprovadas pelo Robson (22/11 20:10, opção A): os 40 mantêm a verba; novos por faixa de força parecida (200/300/400 mi). Altitude real aproximada do estádio (m).",
+ "_doc_50": "Versão 50 clubes (22/11/2026): 10 clubes novos no FIM da lista (mantém os ids). Verbas: ver _doc_budget (pelo over, 23/11). Altitude real aproximada do estádio (m).",
  "mid_window_round": 24
 }

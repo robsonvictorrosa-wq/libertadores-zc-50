@@ -14,7 +14,7 @@ Local: `npm ci && node import.js && DATABASE_URL=postgres://... PGSSL=0 node ser
 Herdado (vem do `config/` e entra no SQLite no build): elencos brasileiros, sorteio ZC (30 jogadores), potenciais corrigidos (37), `player_overrides`, Armani/Perri e Coates/Otávio (correções do sorteio), as listas dos três leilões (pré, surpresa, meio), verbas dos 40 clubes, prêmios, meta do onze.
 
 No Postgres novo, na subida:
-- A sala `LIGA` é criada **antes** das migrações (`createLiga`), com as verbas do config. Assim o leilão de pré-temporada herdado vira 22 lotes da sala nova.
+- A sala `LIGA` é criada **antes** das migrações (`createLiga`), com as verbas do config (verba pelo over, opção B de 23/11; banco já existente recebe a migração única `verbas-over-2311`). Assim o leilão de pré-temporada herdado vira 22 lotes da sala nova.
 - Leilão surpresa: criado na subida quando `config/leilao-surpresa.json` tem datas futuras (12/01 16:00 → 13/01 12:00).
 - Leilão do meio: os 22 lotes são criados quando a janela do meio abre (`mkt_stage='mid'`), para não se misturarem ao leilão de pré-temporada.
 - Mantidos (genéricos): idades BR, `syncIdades`, recálculo de valores, tabelas de camisa, `koFormato`, `ovrZero`, `evoReplay`, `evoPontas`.
