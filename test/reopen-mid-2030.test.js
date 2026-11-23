@@ -21,7 +21,7 @@ assert.match(ui,/20:25/);
 assert.doesNotMatch(ui,/Só quem <b>não levou ninguém<\/b>/);
 assert.doesNotMatch(ui,/!a\.mid_won&&/);
 const sw=fs.readFileSync(path.join(__dirname,'../public/sw.js'),'utf8');
-assert.match(sw,/const V='zc-v74'/);
+assert.match(sw,/const V='zc-v75'/);
 const ag=fs.readFileSync(path.join(__dirname,'../config/agenda-zc.json'),'utf8');
 // versão 50: agenda nova (10/01/2027); a data de 13/11 era da temporada antiga
 console.log('ok: reabre todos os lotes mid até 20:30, reverte venda, todos podem lançar');

@@ -96,7 +96,7 @@ async function migLeilaoMid1111b(){if((await pool.query("SELECT 1 FROM lib_migra
     else if(d.status==='open')await c.query('UPDATE auction_lots SET from_club=$2,min_bid=$3 WHERE id=$1',[d.id,auc,Math.max(1e5,Math.round(p.market_value*pct/1e5)*1e5)]);
    }
    await c.query('UPDATE rooms SET version=version+1 WHERE id=$1',[room.id]);
-   const MW=(JSON.parse(fs.readFileSync(__dirname+'/config/agenda-zc.json','utf8')).windows||{}).mid||{};const fbr=d=>d?new Date(d).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'a definir';
+   const MW=(require('./agenda').AG.windows||{}).mid||{};const fbr=d=>d?new Date(d).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'a definir';
    let ev=`🔨 Leilão do meio da fase de liga: ${ps.length-skipped.length} jogador(es) definidos (abre ${fbr(MW.auction_start)} e fecha ${fbr(MW.auction_close)}, horário de Brasília).`;
    if(moved.length)ev+=` Saíram dos clubes para o leilão: ${moved.join(', ')}.`;
    if(skipped.length)ev+=` Não entraram (já estão em clube com técnico): ${skipped.join(', ')}.`;
@@ -220,6 +220,7 @@ async function migLeilaoMid1111b(){if((await pool.query("SELECT 1 FROM lib_migra
  require('./extras')({app,uni,q,pool,auth,wrap,fail,member,bump,R,M});
  require('./kit').attach({app,uni,q,pool,auth,wrap,fail,member,bump,R,M});
  require('./bolao')({app,uni,q,pool,auth,wrap,fail,member});
+ require('./temporadas')({app,uni,q,pool,auth,wrap,fail,member,R,ready}); // painel da temporada (nova temporada / reset), só admin
  // apagar a própria conta (usado também para limpar usuários de teste): exige PIN
  app.delete('/api/me',auth,wrap(async(r,s)=>{const [u]=await q('SELECT * FROM users WHERE id=$1',[r.user.id]);if(!(await check(String(r.body?.pin||''),u.pass_hash)))throw fail('PIN incorreto',401);
   await q('DELETE FROM rooms WHERE owner_id=$1',[u.id]);await q('DELETE FROM room_managers WHERE user_id=$1',[u.id]);await q('DELETE FROM watchlist WHERE user_id=$1',[u.id]);await q('DELETE FROM users WHERE id=$1',[u.id]);s.json({ok:1});}));

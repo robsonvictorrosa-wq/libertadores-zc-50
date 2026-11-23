@@ -188,14 +188,55 @@ module.exports=({app,uni,q,pool,auth,wrap,fail,member,bump,R,M})=>{
    const p=await R.player(c,room.id,pid);if(!p||p.club_id!==AUCZ)throw fail('Esse jogador não está mais travado');
    await M.execute(c,rm,{pid,from:AUCZ,to,fee,kind:'leilão no grupo'});await c.query("UPDATE auction_lots SET winner_club=$2,price=$3 WHERE id=$1",[l.id,to,fee||null]);
    await note(c,room.id,`🔨 Leilão no grupo: ${pname(pid)} foi para o ${cname(to)}${fee?` por € ${(fee/1e6).toFixed(1)} mi`:''}.`);return {ok:1,player:pname(pid),club:cname(to)};});s.json(out);}));
- app.post('/api/rooms/:code/zc/admin/auction/add',auth,wrap(async(r,s)=>{const room=await member(r);own(room,r);const st=stOf(room),state=stateOf(room);if(!CAL[st]||!['waiting','auction'].includes(state))throw fail('Agora não é período de leilão');
-  const [cnt]=await q("SELECT count(*)::int n FROM auction_lots WHERE room_id=$1 AND season=$2 AND status='open' AND COALESCE(stage,'')<>'surpresa'",[room.id,room.season]);if(cnt.n>=CAL[st].lots)throw fail(`O ${CAL[st].label} já tem ${CAL[st].lots} jogadores (máximo)`);
-  const p=await R.player(pool,room.id,+r.body?.player_id);if(!p)throw fail('Jogador não encontrado');
-  if(!L.CLUBS.includes(p.club_id))throw fail('Só jogadores dos '+L.CLUBS.length+' clubes');if(p.loan_from)throw fail('Jogador emprestado não pode ir a leilão');
-  const [d]=await q("SELECT id FROM auction_lots WHERE room_id=$1 AND season=$2 AND player_id=$3 AND status='open'",[room.id,room.season,p.id]);if(d)throw fail('Jogador já está no leilão');const [d2]=await q("SELECT id FROM auction_lots WHERE room_id=$1 AND season=$2 AND from_club=$3 AND status='open'",[room.id,room.season,p.club_id]);if(d2)throw fail(`Já há um jogador do ${cname(p.club_id)} neste leilão (máximo 1 por clube)`);
-  const min=+r.body?.min_bid>0?Math.round(+r.body.min_bid):Math.max(1e5,Math.round((+p.market_value||1e6)*(CF.auction?.min_bid_pct??.5)));const comp=await comp0(pool,room);
-  await q('INSERT INTO auction_lots(room_id,season,player_id,from_club,min_bid,created_round,stage) VALUES($1,$2,$3,$4,$5,$6,$7)',[room.id,room.season,p.id,p.club_id,min,comp?.current_round||0,st]);await note(pool,room.id,`🔨 ${r.user.nick} colocou ${p.name} (${cname(p.club_id)}) no ${CAL[st].label}.`);s.json({ok:1});}));
- app.post('/api/rooms/:code/zc/admin/auction/remove',auth,wrap(async(r,s)=>{const room=await member(r);own(room,r);await q("DELETE FROM auction_lots WHERE id=$1 AND room_id=$2 AND status='open' AND COALESCE(stage,'')<>'surpresa'",[+r.body?.lot_id,room.id]);s.json({ok:1});}));
+ // ---------- Leilão: admin escolhe qualquer jogador da base FC27 (Robson 23/11) ----------
+ // Só administradores (admins.js / ADMIN_APELIDOS), checado no servidor. O lote entra no leilão aberto ou, se não houver, no próximo da temporada
+ // (pré -> meio -> fim). Ao arrematar, o jogador sai do clube de origem (mesma regra dos lotes atuais: M.execute; se o clube de origem é da liga,
+ // ele recebe o valor do lance; clube de fora da liga/livre só perde o jogador).
+ const adminOnly=r=>{if(!r.user?.admin)throw fail('Só administradores',403);};
+ const AUCID=()=>[...R.C.values()].find(x=>x.name==='Leilão ZC')?.id;
+ const defMin=p=>Math.max(1e5,Math.round((+p.market_value||1e6)*(CF.auction?.min_bid_pct??.5)/1e5)*1e5);
+ function targetStage(room){const st=stOf(room),state=stateOf(room);if(room.status==='finished')return null;
+  if(CAL[st]&&['waiting','auction'].includes(state))return st;
+  if(st==='mid'&&room.status==='season'&&MIDW().auction_close&&Date.now()<Date.parse(MIDW().auction_close))return 'mid';
+  if(!st||st==='pre')return 'mid';if(st==='mid')return 'end';return null;}
+ app.locals.zcTargetStage=targetStage;
+ const nrm=t=>String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+ app.get('/api/rooms/:code/zc/admin/fc27',auth,wrap(async(r,s)=>{const room=await member(r);adminOnly(r);
+  const qn=nrm(r.query.q).trim(),qc=nrm(r.query.club).trim(),pos=String(r.query.pos||'').toUpperCase(),omin=+r.query.omin||0,omax=+r.query.omax||99,fem=r.query.fem==='1';
+  if(qn.length<2&&qc.length<2&&!pos&&!omin)throw fail('Use pelo menos um filtro (nome ou clube com 2+ letras, posição ou over mínimo)');
+  const ov=new Map((await q('SELECT * FROM room_players WHERE room_id=$1',[room.id])).map(o=>[o.player_id,o]));
+  const lots=new Map((await q("SELECT player_id,stage FROM auction_lots WHERE room_id=$1 AND season=$2 AND status='open'",[room.id,room.season])).map(x=>[x.player_id,x.stage]));
+  const hum=new Map((await q('SELECT m.club_id,u.nick FROM room_managers m JOIN users u ON u.id=m.user_id WHERE m.room_id=$1 AND m.club_id IS NOT NULL',[room.id])).map(x=>[x.club_id,x.nick]));
+  const LIB=new Set(L.CLUBS),AUC=AUCID(),out=[];
+  for(const b of R.P.values()){if(!fem&&b.gender==='Mulher')continue;const o=ov.get(b.id);const cid=o?.club_id??b.club_id;
+   if(qn.length>=2&&!nrm(b.name).includes(qn))continue;if(pos&&b.primary_position!==pos)continue;
+   const cn=cname(cid);if(qc.length>=2&&!nrm(cn).includes(qc))continue;
+   const e=o?R.merge(b,o):b;if(e.overall<omin||e.overall>omax)continue;
+   out.push({id:b.id,name:b.name,pos:b.primary_position,overall:e.overall,potential:e.potential,age:e.age,nationality:b.nationality,market_value:+e.market_value||0,min_default:defMin(e),club_id:cid,club:cn,
+    in_league:LIB.has(cid),manager:hum.get(cid)||null,locked:cid===AUC,on_loan:!!(o&&o.loan_from),in_lot:lots.get(b.id)||null,free:R.isFree(cid)});
+   if(out.length>4000)break;}
+  out.sort((a,b)=>b.overall-a.overall||a.name.localeCompare(b.name));
+  s.json({target:targetStage(room),target_label:CAL[targetStage(room)]?.label||null,total:out.length,players:out.slice(0,60)});}));
+ app.post('/api/rooms/:code/zc/admin/auction/add',auth,wrap(async(r,s)=>{const room=await member(r);adminOnly(r);
+  const out=await tx(room,async c=>{const [rm]=(await c.query('SELECT * FROM rooms WHERE id=$1 FOR UPDATE',[room.id])).rows;const st=targetStage(rm);
+   if(!st)throw fail(rm.status==='finished'?'A temporada acabou: comece a nova temporada para montar o leilão de pré-temporada':'Não há mais leilão nesta temporada');
+   const pid=+r.body?.player_id;if(!R.P.has(pid))throw fail('Jogador não encontrado na base FC27');const p=await R.player(c,room.id,pid);if(!p)throw fail('Jogador não encontrado');
+   if(p.loan_from)throw fail('Jogador emprestado não pode ir a leilão');
+   const [d]=(await c.query("SELECT id FROM auction_lots WHERE room_id=$1 AND season=$2 AND player_id=$3 AND status='open'",[room.id,rm.season,p.id])).rows;if(d)throw fail('Jogador já está no leilão');
+   const AUC=AUCID(),inLeague=L.CLUBS.includes(p.club_id);
+   if(inLeague){const [d2]=(await c.query("SELECT id FROM auction_lots WHERE room_id=$1 AND season=$2 AND from_club=$3 AND status='open' AND COALESCE(stage,'')<>'surpresa'",[room.id,rm.season,p.club_id])).rows;if(d2)throw fail(`Já há um jogador do ${cname(p.club_id)} neste leilão (máximo 1 por clube da liga)`);}
+   const raw=r.body?.min_bid;const min=raw!=null&&raw!==''&&+raw>0?Math.max(1e5,Math.round(+raw)):defMin(p);
+   const comp=await comp0(c,rm);
+   const {rows:[lot]}=await c.query('INSERT INTO auction_lots(room_id,season,player_id,from_club,min_bid,created_round,stage) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id',[room.id,rm.season,p.id,p.club_id,min,comp?.current_round||0,st]);
+   const now=stateOf(rm)==='auction'&&stOf(rm)===st?'aberto':'próximo';
+   await note(c,room.id,`🔨 ${r.user.nick} (admin) colocou ${p.name} (${cname(p.club_id)}${inLeague?', clube da liga':''}) no ${CAL[st].label} (${now}), lance mínimo € ${(min/1e6).toFixed(1)} mi.`+(inLeague?` Se for arrematado, sai do ${cname(p.club_id)}, que recebe o valor.`:''));
+   return {ok:1,lot_id:lot.id,stage:st,label:CAL[st].label,min_bid:min,in_league:inLeague,club:cname(p.club_id),locked:p.club_id===AUC};});s.json(out);}));
+ app.post('/api/rooms/:code/zc/admin/auction/remove',auth,wrap(async(r,s)=>{const room=await member(r);adminOnly(r);
+  const out=await tx(room,async c=>{const [l]=(await c.query("SELECT * FROM auction_lots WHERE id=$1 AND room_id=$2 FOR UPDATE",[+r.body?.lot_id,room.id])).rows;if(!l)throw fail('Lote não encontrado');
+   if(l.status!=='open')throw fail('Esse lote já foi encerrado');if(l.stage==='surpresa')throw fail('Lote do leilão surpresa não pode ser removido');
+   const [b]=(await c.query('SELECT (SELECT count(*)::int FROM auction_bids WHERE lot_id=$1)+(SELECT count(*)::int FROM auction_bid_log WHERE lot_id=$1 AND removed_at IS NULL) n',[l.id])).rows;if(b.n)throw fail('Esse lote já tem lance e não pode ser removido');
+   await c.query('DELETE FROM auction_lots WHERE id=$1',[l.id]);const p=await R.player(c,room.id,l.player_id);
+   await note(c,room.id,`🗑️ ${r.user.nick} (admin) tirou ${pname(l.player_id)} do ${CAL[l.stage]?.label||'leilão'} (lote sem lances).`+(p&&p.club_id===AUCID()?' Ele continua no Leilão ZC (travado) até a administração definir o clube.':''));return {ok:1};});s.json(out);}));
  async function calAction(room,a,nick){const st=stOf(room),C=CAL[st];
   return tx(room,async c=>{const [rm]=(await c.query('SELECT * FROM rooms WHERE id=$1 FOR UPDATE',[room.id])).rows;const state=stateOf(rm);
    const openMarket=async()=>{await c.query("UPDATE rooms SET auction_open=false,mkt_stage=$2,mkt_state='market',mkt_until=now()+make_interval(hours=>$3),window_was_open=true WHERE id=$1",[room.id,st,C.hours]);
@@ -220,9 +261,11 @@ module.exports=({app,uni,q,pool,auth,wrap,fail,member,bump,R,M})=>{
     if(ch)await c.query('UPDATE rooms SET version=version+1 WHERE id=$1',[x.id]);await c.query('COMMIT');if(!ch)sweepSkip.add(x.id);}catch(e){await c.query('ROLLBACK');console.error('sweep',e.message)}finally{c.release()}}}catch(e){console.error('sweep',e.message)}}
  setInterval(sweep,+process.env.SWEEP_MS||30000);setTimeout(sweep,5000);
  // agenda automática (config/agenda-zc.json): desbloqueia o leilão, fecha o leilão (abre o mercado) e fixa o fim do mercado, mesmo sem ninguém online
- const AG=JSON.parse(require('fs').readFileSync(__dirname+'/config/agenda-zc.json','utf8'));
+ const AG=require('./agenda').AG; // compartilhado (agenda.js): temporadas novas/reset trocam as datas em memória
  let fixLog=0;async function agenda(){if(AG.paused)return;try{const [rm]=(await pool.query('SELECT * FROM rooms WHERE code=$1',[AG.room])).rows;if(!rm)return;const now=Date.now(),st=stOf(rm),state=stateOf(rm);
-  if(st==='pre'&&state==='waiting'&&now>=Date.parse(AG.auction_start)&&now<Date.parse(AG.auction_close)){await calAction(rm,'auction_start','Agenda automática');await pool.query('UPDATE rooms SET version=version+1 WHERE id=$1',[rm.id]);console.log('agenda: leilão aberto');}
+  if(st==='pre'&&state==='waiting'&&now>=Date.parse(AG.auction_start)&&now<Date.parse(AG.auction_close)){const [nl]=(await pool.query("SELECT count(*)::int n FROM auction_lots WHERE room_id=$1 AND season=$2 AND status='open' AND COALESCE(stage,'')<>'surpresa'",[rm.id,rm.season])).rows;
+   // temporadas seguintes: sem lista fixa; se o admin não colocou nenhum lote, o leilão é pulado e o mercado abre direto
+   if(!nl.n){await calAction(rm,'open_market','Agenda automática (leilão sem jogadores)');console.log('agenda: leilão de pré-temporada sem lotes, mercado aberto');}else await calAction(rm,'auction_start','Agenda automática');await pool.query('UPDATE rooms SET version=version+1 WHERE id=$1',[rm.id]);console.log('agenda: leilão aberto');}
   else if(st==='pre'&&state==='auction'&&rm.auction_open&&now>=Date.parse(AG.auction_close)){await tx(rm,async c=>{const [x]=(await c.query('SELECT * FROM rooms WHERE id=$1 FOR UPDATE',[rm.id])).rows;if(!x.auction_open)return;await c.query('UPDATE rooms SET auction_open=false WHERE id=$1',[rm.id]);const n=await resolveAuction(c,{...x,auction_open:false});
     await note(c,rm.id,`🔨 Leilão de pré-temporada encerrado: ${n} jogador(es) arrematado(s). ${AG.market_open?`O mercado abre ${M.brt(AG.market_open)} (horário de Brasília).`:'Abertura do mercado a definir.'}`);});console.log('agenda: leilão fechado');}
   else if(st==='pre'&&state==='auction'&&!rm.auction_open&&AG.market_open&&now>=Date.parse(AG.market_open)){await calAction(rm,'auction_close','Agenda automática');console.log('agenda: mercado aberto');}
@@ -237,7 +280,7 @@ module.exports=({app,uni,q,pool,auth,wrap,fail,member,bump,R,M})=>{
    else if(y.mkt_stage==='mid'&&y.auction_open&&now>=Date.parse(MW.auction_close)){const [pend]=(await pool.query("SELECT count(*)::int n FROM auction_lots WHERE room_id=$1 AND season=$2 AND status='open' AND stage='mid' AND closes_at IS NOT NULL AND closes_at>now()",[y.id,y.season])).rows;if(pend.n){/* overtime: closeMidOvertime */}else{await tx(y,async c=>{const [z]=(await c.query('SELECT * FROM rooms WHERE id=$1 FOR UPDATE',[y.id])).rows;if(!z.auction_open)return;const [still]=(await c.query("SELECT count(*)::int n FROM auction_lots WHERE room_id=$1 AND season=$2 AND status='open' AND stage='mid' AND closes_at IS NOT NULL AND closes_at>now()",[y.id,y.season])).rows;if(still.n)return;await c.query('UPDATE rooms SET auction_open=false,version=version+1 WHERE id=$1',[y.id]);const n=await resolveAuction(c,{...z,auction_open:false});await note(c,y.id,`🔨 ${CAL.mid.label} encerrado: ${n} jogador(es) arrematado(s). Mercado segue aberto até ${M.brt(MW.market_close)}.`);});console.log('agenda: leilão do meio fechado');}}
    else if(y.mkt_stage==='mid'&&y.mkt_state==='market'&&new Date(y.mkt_until).getTime()!==Date.parse(MW.market_close)&&!y.zc_mkt_fixed){await pool.query('UPDATE rooms SET mkt_until=$2,version=version+1 WHERE id=$1',[y.id,MW.market_close]);}}
   const W=st==='mid'&&MW.market_open?null:(AG.windows||{})[st];if(W&&rm.status==='season'){const [y]=(await pool.query('SELECT * FROM rooms WHERE id=$1',[rm.id])).rows,sy=stateOf(y);
-   if(sy==='waiting'&&now>=Date.parse(W.auction_start)){try{await calAction(y,now<Date.parse(W.auction_close)?'auction_start':'open_market','Agenda automática');}catch(e){if(now>=Date.parse(W.auction_close))await calAction(y,'open_market','Agenda automática');}await pool.query('UPDATE rooms SET version=version+1 WHERE id=$1',[y.id]);console.log('agenda: janela',st);}
+   if(sy==='waiting'&&now>=Date.parse(W.auction_start)){try{await calAction(y,now<Date.parse(W.auction_close)?'auction_start':'open_market','Agenda automática');}catch(e){/* sem lotes (temporadas seguintes): pula o leilão e abre o mercado */await calAction(y,'open_market','Agenda automática (leilão sem jogadores)');}await pool.query('UPDATE rooms SET version=version+1 WHERE id=$1',[y.id]);console.log('agenda: janela',st);}
    else if(sy==='auction'&&now>=Date.parse(W.auction_close)){await calAction(y,'auction_close','Agenda automática');console.log('agenda: leilão fechado',st);}
    else if(y.mkt_state==='market'&&y.mkt_stage===st&&new Date(y.mkt_until).getTime()!==Date.parse(W.market_close)&&!y.zc_mkt_fixed){await pool.query('UPDATE rooms SET mkt_until=$2,version=version+1 WHERE id=$1',[y.id,W.market_close]);console.log('agenda: fim do mercado',st);}}
  }catch(e){console.error('agenda',e.message)}}

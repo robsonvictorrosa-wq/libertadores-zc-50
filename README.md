@@ -22,3 +22,8 @@ No Postgres novo, na subida:
 Desativados (correções de **estado da sala antiga**, dependem de ids de lote/lance/proposta ou horários de 26/10–15/11/2026):
 - `mp.js`: `clubs-2610` (troca Belgrano/Always Ready → Nacional; com Belgrano de volta ela desvincularia o técnico do Belgrano), `verbas-2610` (somaria a verba duas vezes numa sala nova), `restore-unbid-1311`, `reopen-mid-unsold-2015`, `reopen-mid-2030`, `mid-close-2025`. Marcados como aplicados em `lib_migrations` (`skipLegacy`).
 - `extras.js`: `moveLot` (Kaiki, Talisca), `suspendLots`, `unsuspend` (Jair, Marcos Leonardo), `taliscaLog`, `savinho90`, `assignLot` ×7 (Yan Couto, Luiz Henrique, David Neres, Gabriel Sara, Brian Rodríguez, Vanderson, Valentín Gómez), `zeroOffers`, `auditMoney`, `cancelAll2209`, `clearCooldowns`, `auditSwaps`, `hugoBueno` (removido junto com o ajuste do import: Hugo Bueno no Santos era decisão ligada ao leilão antigo; ele fica no Wolves, clube de origem do FC27, fora da liga), `fixLancesRemovidos` (lotes 9 e 10), `evoGomez4` (notas do Andrés Gómez).
+
+## Painel da temporada e leilão FC27 (só admin)
+- Central da liga: **Começar nova temporada** (depois da final) e **Resetar a temporada do zero**, com dupla confirmação, checagem de admin no servidor, log e transação. Snapshot do início de cada temporada em `lib_season_snapshots`; calendário de temporadas novas gerado por `agenda.js` no padrão da temporada 1. Detalhes em `DECISOES-50.md`.
+- Leilão: busca em toda a base FC27 (`/zc/admin/fc27`), adicionar lote no leilão aberto ou no próximo, remover lote sem lance.
+- Teste: `node test/temporadas.test.js` (unidade); E2E com servidor e Postgres descartáveis: `E2E_BASE=http://localhost:3150 DATABASE_URL=postgres://... node test/temporadas.test.js`.
