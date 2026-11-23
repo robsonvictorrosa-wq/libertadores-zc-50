@@ -10,18 +10,22 @@ Os 40 clubes mantêm a verba atual. Novos: Toluca, Cruz Azul, Monterrey € 200 
 ## Leilões
 Refeitos do zero com as listas de `config/leilao-pre.json`, `leilao-surpresa.json` e `leilao-mid.json`; nenhum resultado do leilão antigo conta (inclusive o Hugo Bueno no Santos, removido).
 
-## Calendário (2 jogos por dia, 12:00 e 19:00)
+## Calendário (2 jogos por dia, 12:00 e 19:00) – atualizado pelo Robson em 23/11/2026
+Pré-temporada começa em 10/01/2027; rodada 1 em 15/01/2027.
+
 | Etapa | Data |
 |---|---|
-| Leilão de pré-temporada | dom 03/01/2027, 12:00–20:00 |
-| Mercado de pré-temporada | 03/01 21:40 → sáb 09/01 23:59 |
-| Leilão surpresa | ter 05/01 16:00 → qua 06/01 12:00 |
-| Rodadas 1–24 | dom 10/01 12:00 → qui 21/01 19:00 |
-| Janela do meio | mercado 21/01 21:00 → dom 24/01 20:00; leilão do meio sex 22/01, 12:00–20:00 |
-| Rodadas 25–49 | seg 25/01 12:00 → sáb 06/02 12:00 |
-| Janela do fim | leilão dom 07/02, 12:00–21:00; mercado até seg 08/02 21:00 |
-| Playoffs (ida/volta) | ter 09/02, 12:00 e 19:00 |
-| Oitavas | qua 10/02 |
-| Quartas | qui 11/02 |
-| Semifinais | sex 12/02 |
-| Final | sáb 13/02, 19:00 |
+| Leilão de pré-temporada | dom 10/01/2027, 12:00–20:00 |
+| Mercado de pré-temporada | 10/01 21:40 → qui 14/01 23:59 |
+| Leilão surpresa | ter 12/01 16:00 → qua 13/01 12:00 |
+| Rodadas 1–24 | sex 15/01 12:00 → ter 26/01 19:00 |
+| Janela do meio | mercado 26/01 21:00 → sex 29/01 20:00; leilão do meio qua 27/01, 12:00–20:00 |
+| Rodadas 25–49 | sáb 30/01 12:00 → qui 11/02 12:00 |
+| Janela do fim | leilão sex 12/02, 12:00–21:00; mercado até sáb 13/02 21:00 |
+| Playoffs (ida/volta) | dom 14/02, 12:00 e 19:00 |
+| Oitavas | seg 15/02 |
+| Quartas | ter 16/02 |
+| Semifinais | qua 17/02 |
+| Final | qui 18/02, 19:00 |
+
+Carnaval 2027 (sáb 06/02 → ter 09/02): caem as rodadas 39 a 46 da liga (2 por dia). Janelas e mata-mata ficam fora. Datas mantidas até o Robson decidir.

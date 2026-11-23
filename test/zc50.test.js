@@ -11,9 +11,9 @@ assert.strictEqual(seen.size,50*49/2);
 const strong=[...ids].sort((a,b)=>avg.get(b)-avg.get(a)).slice(0,25);for(const id of ids)assert.strictEqual(home.get(id),strong.includes(id)?24:25);
 const zones=L.standings([],ids,String,null).map(t=>t.zone);assert.strictEqual(zones.filter(z=>z==='oitavas').length,8);assert.strictEqual(zones.filter(z=>z==='playin').length,16);assert.strictEqual(zones.filter(z=>z==='fora').length,26);
 console.log('zc50 OK: 58 rodadas (49 liga + 9 mata-mata), 1225 jogos, 24/25 mandos, zonas 8/16/26');
-// Decisões do Robson (22/11): verbas dos novos, Hugo Bueno fora do Santos, agenda com rodada 1 em 10/01/2027
+// Decisões do Robson (22/11): verbas dos novos, Hugo Bueno fora do Santos, agenda com pré-temporada 10/01/2027, rodada 1 em 15/01/2027
 {const CF=require('../config/libertadores.json');const B=Object.fromEntries(CF.clubs.map(c=>[c.name,c.budget]));
  assert.deepStrictEqual(['Toluca','Cruz Azul','Monterrey','Belgrano','América','Tigres','Independiente Rivadavia','Platense','Huracán','Talleres'].map(n=>B[n]/1e6),[200,200,200,300,300,300,300,300,400,400]);
  assert(!require('fs').readFileSync(__dirname+'/../import.js','utf8').includes('WHERE id=261224'),'Hugo Bueno não pode ter ajuste fixo');
- const AG=require('../config/agenda-zc.json');assert.strictEqual(AG.matches_start,'2027-01-10');assert.strictEqual(AG.paused,true);assert.strictEqual(AG.windows.mid.after_round,24);assert.strictEqual(AG.windows.end.after_round,49);
+ const AG=require('../config/agenda-zc.json');assert.strictEqual(AG.matches_start,'2027-01-15');assert.strictEqual(AG.paused,true);assert.strictEqual(AG.windows.mid.after_round,24);assert.strictEqual(AG.windows.end.after_round,49);
  console.log('zc50 decisões OK');}

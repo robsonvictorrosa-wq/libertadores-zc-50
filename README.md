@@ -5,7 +5,7 @@ Salas multiplayer (apelido + PIN), temporada simulada rodada a rodada, mercado, 
 - **50 clubes** (`config/libertadores.json`): os 40 da versão original + Belgrano, Independiente Rivadavia, Platense, Huracán, Talleres (ARG) e Toluca, América, Cruz Azul, Monterrey, Tigres (MEX), adicionados no fim da lista (ids dos 40 originais inalterados). Elencos FC27 de `data/fc27.json.gz`.
 - **Formato**: todos contra todos em turno único, **49 rodadas**. 1º–8º direto às oitavas; 9º–24º playoffs ida e volta (9×24, 10×23…); 25º–50º eliminados. Oitavas, quartas e semi ida e volta, final única. Total: 58 rodadas. Regras em `libertadores.js` (CFG); o número de rodadas vem do número de clubes (`plan()`).
 - **Janelas**: meio da liga após a rodada 24, fim da liga após a 49 (`config/agenda-zc.json`).
-- **Agenda**: rodada 1 em 10/01/2027 (datas em `config/agenda-zc.json`, resumo em `DECISOES-50.md`). Agenda automática ainda pausada (`"paused": true`) até o Robson testar.
+- **Agenda**: pré-temporada (leilão) em 10/01/2027, rodada 1 em 15/01/2027 (datas em `config/agenda-zc.json`, resumo em `DECISOES-50.md`). Agenda automática ainda pausada (`"paused": true`) até o Robson testar.
 - Stack: Node 20 + Express, SQLite somente leitura (universo FC27, gerado por `node import.js`) e Postgres (`DATABASE_URL`). Deploy: `render.yaml` (web Free). Sem keep-awake.
 
 Local: `npm ci && node import.js && DATABASE_URL=postgres://... PGSSL=0 node server.js` · testes: `for t in test/*.test.js; do node $t; done`
@@ -15,7 +15,7 @@ Herdado (vem do `config/` e entra no SQLite no build): elencos brasileiros, sort
 
 No Postgres novo, na subida:
 - A sala `LIGA` é criada **antes** das migrações (`createLiga`), com as verbas do config. Assim o leilão de pré-temporada herdado vira 22 lotes da sala nova.
-- Leilão surpresa: criado na subida quando `config/leilao-surpresa.json` tem datas futuras (05/01 16:00 → 06/01 12:00).
+- Leilão surpresa: criado na subida quando `config/leilao-surpresa.json` tem datas futuras (12/01 16:00 → 13/01 12:00).
 - Leilão do meio: os 22 lotes são criados quando a janela do meio abre (`mkt_stage='mid'`), para não se misturarem ao leilão de pré-temporada.
 - Mantidos (genéricos): idades BR, `syncIdades`, recálculo de valores, tabelas de camisa, `koFormato`, `ovrZero`, `evoReplay`, `evoPontas`.
 
