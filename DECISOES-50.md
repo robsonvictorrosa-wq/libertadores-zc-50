@@ -50,3 +50,14 @@ Calendário gerado (dia 0 = data escolhida): leilão de pré 12:00–20:00 no di
 
 ## Leilão com jogadores da base FC27 (Robson 23/11) – só administradores
 Na Central da liga, a busca do leilão procura em toda a base FC27 (21.915 jogadores; filtro por nome, clube, posição, over mínimo/máximo; feminino só marcando a opção). O lote entra no leilão aberto ou, se não houver, no próximo da temporada (pré → meio → fim). Lance mínimo: o admin digita; padrão = regra atual (50% do valor de mercado, mínimo € 0,1 mi). Jogador de clube da liga: a tela avisa (e mostra o técnico); se arrematado, sai do clube de origem, que recebe o valor do lance (mesma regra dos lotes atuais); continua valendo no máximo 1 jogador por clube da liga em cada leilão. Jogador de clube de fora da liga ou livre: só sai do clube. Emprestado ou já em lote: não pode. Lote sem lance pode ser removido (com lance, não). Tudo checado no servidor e registrado no log.
+
+## Peso do over na simulação (Robson 23/11)
+"O peso do over na simulação estava muito pouco, aumenta um pouco". Em `sim.js`, o placar esperado usa gols ~ exp(diferença de força / `OVR.div`). O `OVR.div` passou de 16 para **12**, então a diferença de força pesa cerca de 33% mais. Mando, forma, táticas e altitude não mudaram.
+Medição (`node scripts/sim-peso-over.js <div> 20`): todos os pares dos 50 clubes, em ida e volta, 20 vezes cada, somando 49.000 jogos. A diferença considerada é a do over médio do XI. Favorito vence / empata:
+| Diferença de over | Antes (16) | Agora (12) |
+|---|---|---|
+| ~1 ponto | 41,5% / 25,5% | 42,3% / 25,5% |
+| ~3 pontos | 47,9% / 24,4% | 52,3% / 23,4% |
+| ~5 pontos | 57,2% / 22,1% | 63,9% / 20,0% |
+| 6+ pontos | 64,3% / 20,3% | 69,2% / 17,1% |
+Gols por jogo: 2,79 → 2,88. Mandante vence: 45,1% nos dois.
